@@ -1,12 +1,12 @@
 {
   "$schema": "https://developer.microsoft.com/json-schemas/client-side-webpart/2.0/manifest.schema.json",
-  "id": "c1d2e3f4-a5b6-7890-cdef-ab1234567890",
+  "id": "d4e5f6a7-b8c9-4012-defa-bc2345678901",
   "alias": "SpSmartSearchWebPart",
   "componentType": "WebPart",
   "version": "*",
   "manifestVersion": 2,
   "requiresCustomScript": false,
-  "supportedHosts": ["SharePointWebPart", "TeamsPersonalApp", "TeamsTab"],
+  "supportedHosts": ["SharePointWebPart"],
   "supportsThemeVariants": true,
   "preconfiguredEntries": [
     {
