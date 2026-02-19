@@ -1,0 +1,16 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/core-build/config/2017-02/config.schema.json",
+  "version": "2.0",
+  "bundles": {
+    "sharepoint-smart-search-web-part": {
+      "components": [
+        {
+          "entrypoint": "./lib/webparts/spSmartSearch/SpSmartSearchWebPart.js",
+          "manifest": "./src/webparts/spSmartSearch/SpSmartSearchWebPart.manifest.json"
+        }
+      ]
+    }
+  },
+  "externals": {},
+  "localizedResources": {}
+}
