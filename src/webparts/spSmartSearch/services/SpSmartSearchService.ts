@@ -56,9 +56,8 @@ export class SpSmartSearchService {
   }
 
   private async searchDocuments(query: string, siteUrl: string): Promise<ISpSmartItem[]> {
-    const encodedQuery = encodeURIComponent(query);
     const searchUrl = `${siteUrl}/_api/search/query` +
-      `?querytext='${encodedQuery} AND path:"${siteUrl}"'` +
+      `?querytext='${encodeURIComponent(query)} AND Path=${siteUrl}'` +
       `&selectproperties='Title,Path,FileExtension,LastModifiedTime,Author,HitHighlightedSummary'` +
       `&rowlimit=50` +
       `&sourceid='b09a7990-05ea-4af9-81ef-edfab16c4e31'`;
@@ -66,18 +65,16 @@ export class SpSmartSearchService {
   }
 
   private async searchListItems(query: string, siteUrl: string): Promise<ISpSmartItem[]> {
-    const encodedQuery = encodeURIComponent(query);
     const searchUrl = `${siteUrl}/_api/search/query` +
-      `?querytext='${encodedQuery} AND path:"${siteUrl}" AND contentclass:STS_ListItem'` +
+      `?querytext='${encodeURIComponent(query)} AND Path=${siteUrl} AND contentclass:STS_ListItem'` +
       `&selectproperties='Title,Path,LastModifiedTime,Author,HitHighlightedSummary,SiteTitle'` +
       `&rowlimit=50`;
     return this.executeSearch(searchUrl, 'listItem');
   }
 
   private async searchDocumentsByLibraryUrl(query: string, siteUrl: string, libraryUrl: string): Promise<ISpSmartItem[]> {
-    const encodedQuery = encodeURIComponent(query);
     const searchUrl = `${siteUrl}/_api/search/query` +
-      `?querytext='${encodedQuery} AND path:"${libraryUrl}"'` +
+      `?querytext='${encodeURIComponent(query)} AND Path=${libraryUrl}'` +
       `&selectproperties='Title,Path,FileExtension,LastModifiedTime,Author,HitHighlightedSummary'` +
       `&rowlimit=50` +
       `&sourceid='b09a7990-05ea-4af9-81ef-edfab16c4e31'`;
@@ -85,9 +82,8 @@ export class SpSmartSearchService {
   }
 
   private async searchListItemsByListUrl(query: string, siteUrl: string, listUrl: string): Promise<ISpSmartItem[]> {
-    const encodedQuery = encodeURIComponent(query);
     const searchUrl = `${siteUrl}/_api/search/query` +
-      `?querytext='${encodedQuery} AND path:"${listUrl}" AND contentclass:STS_ListItem'` +
+      `?querytext='${encodeURIComponent(query)} AND Path=${listUrl} AND contentclass:STS_ListItem'` +
       `&selectproperties='Title,Path,LastModifiedTime,Author,HitHighlightedSummary,SiteTitle'` +
       `&rowlimit=50`;
     return this.executeSearch(searchUrl, 'listItem');
