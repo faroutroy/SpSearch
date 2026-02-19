@@ -1,7 +1,8 @@
 import { WebPartContext } from '@microsoft/sp-webpart-base';
 import { SPHttpClient, SPHttpClientResponse } from '@microsoft/sp-http';
 import { ISpSmartItem, ISearchResult, DisplayMode } from '../models/ISpSmartItem';
-export class SalesFunnelSearchService {
+
+export class SpSmartSearchService {
   private context: WebPartContext;
 
   constructor(context: WebPartContext) {
