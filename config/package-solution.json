@@ -6,24 +6,6 @@
     "version": "1.0.0.0",
     "includeClientSideAssets": true,
     "isDomainIsolated": false,
-    "developer": {
-      "name": "",
-      "websiteUrl": "",
-      "privacyUrl": "",
-      "termsOfUseUrl": "",
-      "mpnId": "Undefined-1.18.2"
-    },
-    "metadata": {
-      "shortDescription": {
-        "default": "Search Documents and List Items across SharePoint"
-      },
-      "longDescription": {
-        "default": "A powerful search webpart that searches documents and list items with configurable scope and display options."
-      },
-      "screenshotPaths": [],
-      "videoUrl": "",
-      "categories": []
-    },
     "features": [
       {
         "title": "SharePoint Smart Search Feature",
@@ -36,5 +18,4 @@
   "paths": {
     "zippedPackage": "solution/sharepoint-smart-search.sppkg"
   }
-}
 }
