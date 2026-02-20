@@ -20,7 +20,11 @@ export class SpSmartSearchService {
     return this.searchBySite(query, displayMode, scopeUrl);
   }
 
-  private async searchBySite(query: string, displayMode: DisplayMode, siteUrl: string): Promise<ISearchResult> {
+  private async searchBySite(
+    query: string,
+    displayMode: DisplayMode,
+    siteUrl: string
+  ): Promise<ISearchResult> {
     const results: ISearchResult = { documents: [], listItems: [] };
     const normalizedSiteUrl = siteUrl.replace(/\/$/, '');
     try {
@@ -37,7 +41,11 @@ export class SpSmartSearchService {
     return results;
   }
 
-  private async searchByUrl(query: string, displayMode: DisplayMode, targetUrl: string): Promise<ISearchResult> {
+  private async searchByUrl(
+    query: string,
+    displayMode: DisplayMode,
+    targetUrl: string
+  ): Promise<ISearchResult> {
     const results: ISearchResult = { documents: [], listItems: [] };
     try {
       const siteUrl = this.getSiteUrlFromListUrl(targetUrl);
@@ -55,21 +63,20 @@ export class SpSmartSearchService {
     return results;
   }
 
-  // Document select properties
   private readonly docSelectProps: string =
     'Title,Path,FileExtension,LastModifiedTime,Author,HitHighlightedSummary,SiteTitle,' +
     'BusinessArea,BidDate,Estimator,Bid2WinID,Segment,SqYards,LaneMiles,' +
     'NumberOfLots,City,County,State,ZipCode,Owner,Project';
 
-  // List item select properties
   private readonly listSelectProps: string =
     'Title,Path,LastModifiedTime,Author,HitHighlightedSummary,SiteTitle,' +
     'BusinessArea,BidDate,Estimator,Bid2WinID,Segment,SqYards,LaneMiles,' +
     'NumberOfLots,City,County,State,ZipCode,Owner,Project';
 
   private async searchDocuments(query: string, siteUrl: string): Promise<ISpSmartItem[]> {
+    const encodedSiteUrl = siteUrl.replace(/ /g, '%20');
     const searchUrl = `${siteUrl}/_api/search/query` +
-      `?querytext='${encodeURIComponent(query)} AND Path=${siteUrl}'` +
+      `?querytext='${encodeURIComponent(query)} AND Path=${encodedSiteUrl}'` +
       `&selectproperties='${this.docSelectProps}'` +
       `&rowlimit=50` +
       `&sourceid='b09a7990-05ea-4af9-81ef-edfab16c4e31'`;
@@ -77,37 +84,54 @@ export class SpSmartSearchService {
   }
 
   private async searchListItems(query: string, siteUrl: string): Promise<ISpSmartItem[]> {
+    const encodedSiteUrl = siteUrl.replace(/ /g, '%20');
     const searchUrl = `${siteUrl}/_api/search/query` +
-      `?querytext='${encodeURIComponent(query)} AND Path=${siteUrl} AND contentclass:STS_ListItem'` +
+      `?querytext='${encodeURIComponent(query)} AND Path=${encodedSiteUrl} AND contentclass:STS_ListItem'` +
       `&selectproperties='${this.listSelectProps}'` +
       `&rowlimit=50`;
     return this.executeSearch(searchUrl, 'listItem');
   }
 
-  private async searchDocumentsByLibraryUrl(query: string, siteUrl: string, libraryUrl: string): Promise<ISpSmartItem[]> {
+  private async searchDocumentsByLibraryUrl(
+    query: string,
+    siteUrl: string,
+    libraryUrl: string
+  ): Promise<ISpSmartItem[]> {
+    const encodedLibraryUrl = libraryUrl.replace(/ /g, '%20');
     const searchUrl = `${siteUrl}/_api/search/query` +
-      `?querytext='${encodeURIComponent(query)} AND Path=${libraryUrl}'` +
+      `?querytext='${encodeURIComponent(query)} AND Path=${encodedLibraryUrl}'` +
       `&selectproperties='${this.docSelectProps}'` +
       `&rowlimit=50` +
       `&sourceid='b09a7990-05ea-4af9-81ef-edfab16c4e31'`;
     return this.executeSearch(searchUrl, 'document');
   }
 
-  private async searchListItemsByListUrl(query: string, siteUrl: string, listUrl: string): Promise<ISpSmartItem[]> {
+  private async searchListItemsByListUrl(
+    query: string,
+    siteUrl: string,
+    listUrl: string
+  ): Promise<ISpSmartItem[]> {
+    const encodedListUrl = listUrl.replace(/ /g, '%20');
     const searchUrl = `${siteUrl}/_api/search/query` +
-      `?querytext='${encodeURIComponent(query)} AND Path=${listUrl} AND contentclass:STS_ListItem'` +
+      `?querytext='${encodeURIComponent(query)} AND Path=${encodedListUrl} AND contentclass:STS_ListItem'` +
       `&selectproperties='${this.listSelectProps}'` +
       `&rowlimit=50`;
     return this.executeSearch(searchUrl, 'listItem');
   }
 
-  private async executeSearch(searchUrl: string, type: 'document' | 'listItem'): Promise<ISpSmartItem[]> {
+  private async executeSearch(
+    searchUrl: string,
+    type: 'document' | 'listItem'
+  ): Promise<ISpSmartItem[]> {
     const response: SPHttpClientResponse = await this.context.spHttpClient.get(
       searchUrl, SPHttpClient.configurations.v1
     );
     if (!response.ok) throw new Error(`Search failed: ${response.status} ${response.statusText}`);
     const data = await response.json();
-    const rows = data?.PrimaryQueryResult?.RelevantResults?.Table?.Rows || [];
+    const rows = data && data.PrimaryQueryResult && data.PrimaryQueryResult.RelevantResults &&
+      data.PrimaryQueryResult.RelevantResults.Table && data.PrimaryQueryResult.RelevantResults.Table.Rows
+      ? data.PrimaryQueryResult.RelevantResults.Table.Rows
+      : [];
     return rows.map((row: any) => this.mapRowToItem(row, type));
   }
 
@@ -128,7 +152,6 @@ export class SpSmartSearchService {
       modifiedDate: this.getCellValue(row, 'LastModifiedTime') || undefined,
       author: this.getCellValue(row, 'Author') || undefined,
       summary: this.stripHighlightTags(this.getCellValue(row, 'HitHighlightedSummary')),
-      // Custom fields
       businessArea: this.getCellValue(row, 'BusinessArea') || undefined,
       bidDate: this.getCellValue(row, 'BidDate') || undefined,
       estimator: this.getCellValue(row, 'Estimator') || undefined,
