@@ -74,21 +74,52 @@ export class SpSmartSearchService {
     'NumberOfLots,City,County,State,ZipCode,Owner,Project';
 
   private async searchDocuments(query: string, siteUrl: string): Promise<ISpSmartItem[]> {
-    const encodedSiteUrl = siteUrl.replace(/ /g, '%20');
+    const siteId = this.context.pageContext.site.id.toString();
+    const webId = this.context.pageContext.web.id.toString();
+    const encodedSiteUrl = encodeURIComponent(`"${siteUrl}"`);
+
+    const queryText = `(${query}*)`;
+    const queryTemplate =
+      `{searchTerms} ` +
+      `(siteId:{${siteId}} OR siteId:${siteId}) ` +
+      `(webId:{${webId}} OR webId:${webId}) ` +
+      `path:"${siteUrl}" ` +
+      `ContentTypeId:0x0101*`;
+
     const searchUrl = `${siteUrl}/_api/search/query` +
-      `?querytext='${encodeURIComponent(query)} AND Path=${encodedSiteUrl}'` +
+      `?querytext='${encodeURIComponent(queryText)}'` +
+      `&querytemplate='${encodeURIComponent(queryTemplate)}'` +
       `&selectproperties='${this.docSelectProps}'` +
       `&rowlimit=50` +
-      `&sourceid='b09a7990-05ea-4af9-81ef-edfab16c4e31'`;
+      `&BypassResultTypes=true` +
+      `&EnableQueryRules=false` +
+      `&TrimDuplicates=false`;
+
     return this.executeSearch(searchUrl, 'document');
   }
 
   private async searchListItems(query: string, siteUrl: string): Promise<ISpSmartItem[]> {
-    const encodedSiteUrl = siteUrl.replace(/ /g, '%20');
+    const siteId = this.context.pageContext.site.id.toString();
+    const webId = this.context.pageContext.web.id.toString();
+
+    const queryText = `(${query}*)`;
+    const queryTemplate =
+      `{searchTerms} ` +
+      `(siteId:{${siteId}} OR siteId:${siteId}) ` +
+      `(webId:{${webId}} OR webId:${webId}) ` +
+      `path:"${siteUrl}" ` +
+      `ContentTypeId:0x0* ` +
+      `NOT ContentTypeId:0x0101*`;
+
     const searchUrl = `${siteUrl}/_api/search/query` +
-      `?querytext='${encodeURIComponent(query)} AND Path=${encodedSiteUrl} AND contentclass:STS_ListItem'` +
+      `?querytext='${encodeURIComponent(queryText)}'` +
+      `&querytemplate='${encodeURIComponent(queryTemplate)}'` +
       `&selectproperties='${this.listSelectProps}'` +
-      `&rowlimit=50`;
+      `&rowlimit=50` +
+      `&BypassResultTypes=true` +
+      `&EnableQueryRules=false` +
+      `&TrimDuplicates=false`;
+
     return this.executeSearch(searchUrl, 'listItem');
   }
 
@@ -97,12 +128,26 @@ export class SpSmartSearchService {
     siteUrl: string,
     libraryUrl: string
   ): Promise<ISpSmartItem[]> {
-    const encodedLibraryUrl = libraryUrl.replace(/ /g, '%20');
+    const siteId = this.context.pageContext.site.id.toString();
+    const webId = this.context.pageContext.web.id.toString();
+
+    const queryText = `(${query}*)`;
+    const queryTemplate =
+      `{searchTerms} ` +
+      `(siteId:{${siteId}} OR siteId:${siteId}) ` +
+      `(webId:{${webId}} OR webId:${webId}) ` +
+      `(path:"${libraryUrl}" OR ParentLink:"${libraryUrl}*") ` +
+      `ContentTypeId:0x0101*`;
+
     const searchUrl = `${siteUrl}/_api/search/query` +
-      `?querytext='${encodeURIComponent(query)} AND Path=${encodedLibraryUrl}'` +
+      `?querytext='${encodeURIComponent(queryText)}'` +
+      `&querytemplate='${encodeURIComponent(queryTemplate)}'` +
       `&selectproperties='${this.docSelectProps}'` +
       `&rowlimit=50` +
-      `&sourceid='b09a7990-05ea-4af9-81ef-edfab16c4e31'`;
+      `&BypassResultTypes=true` +
+      `&EnableQueryRules=false` +
+      `&TrimDuplicates=false`;
+
     return this.executeSearch(searchUrl, 'document');
   }
 
@@ -111,11 +156,27 @@ export class SpSmartSearchService {
     siteUrl: string,
     listUrl: string
   ): Promise<ISpSmartItem[]> {
-    const encodedListUrl = listUrl.replace(/ /g, '%20');
+    const siteId = this.context.pageContext.site.id.toString();
+    const webId = this.context.pageContext.web.id.toString();
+
+    const queryText = `(${query}*)`;
+    const queryTemplate =
+      `{searchTerms} ` +
+      `(siteId:{${siteId}} OR siteId:${siteId}) ` +
+      `(webId:{${webId}} OR webId:${webId}) ` +
+      `(path:"${listUrl}" OR ParentLink:"${listUrl}*") ` +
+      `ContentTypeId:0x0* ` +
+      `NOT ContentTypeId:0x0101*`;
+
     const searchUrl = `${siteUrl}/_api/search/query` +
-      `?querytext='${encodeURIComponent(query)} AND Path=${encodedListUrl} AND contentclass:STS_ListItem'` +
+      `?querytext='${encodeURIComponent(queryText)}'` +
+      `&querytemplate='${encodeURIComponent(queryTemplate)}'` +
       `&selectproperties='${this.listSelectProps}'` +
-      `&rowlimit=50`;
+      `&rowlimit=50` +
+      `&BypassResultTypes=true` +
+      `&EnableQueryRules=false` +
+      `&TrimDuplicates=false`;
+
     return this.executeSearch(searchUrl, 'listItem');
   }
 
@@ -128,10 +189,14 @@ export class SpSmartSearchService {
     );
     if (!response.ok) throw new Error(`Search failed: ${response.status} ${response.statusText}`);
     const data = await response.json();
-    const rows = data && data.PrimaryQueryResult && data.PrimaryQueryResult.RelevantResults &&
-      data.PrimaryQueryResult.RelevantResults.Table && data.PrimaryQueryResult.RelevantResults.Table.Rows
-      ? data.PrimaryQueryResult.RelevantResults.Table.Rows
-      : [];
+    const rows =
+      data &&
+      data.PrimaryQueryResult &&
+      data.PrimaryQueryResult.RelevantResults &&
+      data.PrimaryQueryResult.RelevantResults.Table &&
+      data.PrimaryQueryResult.RelevantResults.Table.Rows
+        ? data.PrimaryQueryResult.RelevantResults.Table.Rows
+        : [];
     return rows.map((row: any) => this.mapRowToItem(row, type));
   }
 
