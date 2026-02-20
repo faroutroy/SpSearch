@@ -63,14 +63,21 @@ export class SpSmartSearchService {
     return results;
   }
 
-  private readonly docSelectProps: string[] = [
+  private buildSelectProperties(props: string[]): any {
+    return {
+      '__metadata': { 'type': 'Collection(Edm.String)' },
+      'results': props
+    };
+  }
+
+  private readonly docProps: string[] = [
     'Title', 'Path', 'FileExtension', 'LastModifiedTime', 'Author',
     'HitHighlightedSummary', 'SiteTitle', 'BusinessArea', 'BidDate',
     'Estimator', 'Bid2WinID', 'Segment', 'SqYards', 'LaneMiles',
     'NumberOfLots', 'City', 'County', 'State', 'ZipCode', 'Owner', 'Project'
   ];
 
-  private readonly listSelectProps: string[] = [
+  private readonly listProps: string[] = [
     'Title', 'Path', 'LastModifiedTime', 'Author',
     'HitHighlightedSummary', 'SiteTitle', 'BusinessArea', 'BidDate',
     'Estimator', 'Bid2WinID', 'Segment', 'SqYards', 'LaneMiles',
@@ -80,38 +87,36 @@ export class SpSmartSearchService {
   private async searchDocuments(query: string, siteUrl: string): Promise<ISpSmartItem[]> {
     const siteId = this.context.pageContext.site.id.toString();
     const webId = this.context.pageContext.web.id.toString();
-
     const body = {
       request: {
-        Querytext: `(${query}*)`,
-        QueryTemplate: `{searchTerms} (siteId:{${siteId}} OR siteId:${siteId}) (webId:{${webId}} OR webId:${webId}) path:"${siteUrl}" ContentTypeId:0x0101*`,
-        SelectProperties: { results: this.docSelectProps },
-        RowLimit: 50,
-        BypassResultTypes: true,
-        EnableQueryRules: false,
-        TrimDuplicates: false
+        '__metadata': { 'type': 'Microsoft.Office.Server.Search.REST.SearchRequest' },
+        'Querytext': `(${query}*)`,
+        'QueryTemplate': `{searchTerms} (siteId:{${siteId}} OR siteId:${siteId}) (webId:{${webId}} OR webId:${webId}) path:"${siteUrl}" ContentTypeId:0x0101*`,
+        'SelectProperties': this.buildSelectProperties(this.docProps),
+        'RowLimit': 50,
+        'BypassResultTypes': true,
+        'EnableQueryRules': false,
+        'TrimDuplicates': false
       }
     };
-
     return this.executePostSearch(siteUrl, body, 'document');
   }
 
   private async searchListItems(query: string, siteUrl: string): Promise<ISpSmartItem[]> {
     const siteId = this.context.pageContext.site.id.toString();
     const webId = this.context.pageContext.web.id.toString();
-
     const body = {
       request: {
-        Querytext: `(${query}*)`,
-        QueryTemplate: `{searchTerms} (siteId:{${siteId}} OR siteId:${siteId}) (webId:{${webId}} OR webId:${webId}) path:"${siteUrl}" ContentTypeId:0x0* NOT ContentTypeId:0x0101*`,
-        SelectProperties: { results: this.listSelectProps },
-        RowLimit: 50,
-        BypassResultTypes: true,
-        EnableQueryRules: false,
-        TrimDuplicates: false
+        '__metadata': { 'type': 'Microsoft.Office.Server.Search.REST.SearchRequest' },
+        'Querytext': `(${query}*)`,
+        'QueryTemplate': `{searchTerms} (siteId:{${siteId}} OR siteId:${siteId}) (webId:{${webId}} OR webId:${webId}) path:"${siteUrl}" ContentTypeId:0x0* NOT ContentTypeId:0x0101*`,
+        'SelectProperties': this.buildSelectProperties(this.listProps),
+        'RowLimit': 50,
+        'BypassResultTypes': true,
+        'EnableQueryRules': false,
+        'TrimDuplicates': false
       }
     };
-
     return this.executePostSearch(siteUrl, body, 'listItem');
   }
 
@@ -122,19 +127,18 @@ export class SpSmartSearchService {
   ): Promise<ISpSmartItem[]> {
     const siteId = this.context.pageContext.site.id.toString();
     const webId = this.context.pageContext.web.id.toString();
-
     const body = {
       request: {
-        Querytext: `(${query}*)`,
-        QueryTemplate: `{searchTerms} (siteId:{${siteId}} OR siteId:${siteId}) (webId:{${webId}} OR webId:${webId}) (path:"${libraryUrl}" OR ParentLink:"${libraryUrl}*") ContentTypeId:0x0101*`,
-        SelectProperties: { results: this.docSelectProps },
-        RowLimit: 50,
-        BypassResultTypes: true,
-        EnableQueryRules: false,
-        TrimDuplicates: false
+        '__metadata': { 'type': 'Microsoft.Office.Server.Search.REST.SearchRequest' },
+        'Querytext': `(${query}*)`,
+        'QueryTemplate': `{searchTerms} (siteId:{${siteId}} OR siteId:${siteId}) (webId:{${webId}} OR webId:${webId}) (path:"${libraryUrl}" OR ParentLink:"${libraryUrl}*") ContentTypeId:0x0101*`,
+        'SelectProperties': this.buildSelectProperties(this.docProps),
+        'RowLimit': 50,
+        'BypassResultTypes': true,
+        'EnableQueryRules': false,
+        'TrimDuplicates': false
       }
     };
-
     return this.executePostSearch(siteUrl, body, 'document');
   }
 
@@ -145,19 +149,18 @@ export class SpSmartSearchService {
   ): Promise<ISpSmartItem[]> {
     const siteId = this.context.pageContext.site.id.toString();
     const webId = this.context.pageContext.web.id.toString();
-
     const body = {
       request: {
-        Querytext: `(${query}*)`,
-        QueryTemplate: `{searchTerms} (siteId:{${siteId}} OR siteId:${siteId}) (webId:{${webId}} OR webId:${webId}) (path:"${listUrl}" OR ParentLink:"${listUrl}*") ContentTypeId:0x0* NOT ContentTypeId:0x0101*`,
-        SelectProperties: { results: this.listSelectProps },
-        RowLimit: 50,
-        BypassResultTypes: true,
-        EnableQueryRules: false,
-        TrimDuplicates: false
+        '__metadata': { 'type': 'Microsoft.Office.Server.Search.REST.SearchRequest' },
+        'Querytext': `(${query}*)`,
+        'QueryTemplate': `{searchTerms} (siteId:{${siteId}} OR siteId:${siteId}) (webId:{${webId}} OR webId:${webId}) (path:"${listUrl}" OR ParentLink:"${listUrl}*") ContentTypeId:0x0* NOT ContentTypeId:0x0101*`,
+        'SelectProperties': this.buildSelectProperties(this.listProps),
+        'RowLimit': 50,
+        'BypassResultTypes': true,
+        'EnableQueryRules': false,
+        'TrimDuplicates': false
       }
     };
-
     return this.executePostSearch(siteUrl, body, 'listItem');
   }
 
@@ -170,9 +173,9 @@ export class SpSmartSearchService {
 
     const options: ISPHttpClientOptions = {
       headers: {
-        'Accept': 'application/json;odata=nometadata',
-        'Content-Type': 'application/json;odata=nometadata',
-        'odata-version': ''
+        'Accept': 'application/json;odata=verbose',
+        'Content-Type': 'application/json;odata=verbose',
+        'odata-version': '3.0'
       },
       body: JSON.stringify(body)
     };
@@ -191,18 +194,22 @@ export class SpSmartSearchService {
     const data = await response.json();
     const rows =
       data &&
-      data.PrimaryQueryResult &&
-      data.PrimaryQueryResult.RelevantResults &&
-      data.PrimaryQueryResult.RelevantResults.Table &&
-      data.PrimaryQueryResult.RelevantResults.Table.Rows
-        ? data.PrimaryQueryResult.RelevantResults.Table.Rows
+      data.d &&
+      data.d.postquery &&
+      data.d.postquery.PrimaryQueryResult &&
+      data.d.postquery.PrimaryQueryResult.RelevantResults &&
+      data.d.postquery.PrimaryQueryResult.RelevantResults.Table &&
+      data.d.postquery.PrimaryQueryResult.RelevantResults.Table.Rows &&
+      data.d.postquery.PrimaryQueryResult.RelevantResults.Table.Rows.results
+        ? data.d.postquery.PrimaryQueryResult.RelevantResults.Table.Rows.results
         : [];
 
     return rows.map((row: any) => this.mapRowToItem(row, type));
   }
 
   private getCellValue(row: any, key: string): string {
-    const cell = (row.Cells || []).find((c: any) => c.Key === key);
+    const cells = row.Cells && row.Cells.results ? row.Cells.results : (row.Cells || []);
+    const cell = cells.find((c: any) => c.Key === key);
     return cell ? cell.Value || '' : '';
   }
 
