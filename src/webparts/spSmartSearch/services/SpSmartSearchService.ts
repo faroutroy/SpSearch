@@ -55,10 +55,22 @@ export class SpSmartSearchService {
     return results;
   }
 
+  // Document select properties
+  private readonly docSelectProps: string =
+    'Title,Path,FileExtension,LastModifiedTime,Author,HitHighlightedSummary,SiteTitle,' +
+    'BusinessArea,BidDate,Estimator,Bid2WinID,Segment,SqYards,LaneMiles,' +
+    'NumberOfLots,City,County,State,ZipCode,Owner,Project';
+
+  // List item select properties
+  private readonly listSelectProps: string =
+    'Title,Path,LastModifiedTime,Author,HitHighlightedSummary,SiteTitle,' +
+    'BusinessArea,BidDate,Estimator,Bid2WinID,Segment,SqYards,LaneMiles,' +
+    'NumberOfLots,City,County,State,ZipCode,Owner,Project';
+
   private async searchDocuments(query: string, siteUrl: string): Promise<ISpSmartItem[]> {
     const searchUrl = `${siteUrl}/_api/search/query` +
       `?querytext='${encodeURIComponent(query)} AND Path=${siteUrl}'` +
-      `&selectproperties='Title,Path,FileExtension,LastModifiedTime,Author,HitHighlightedSummary'` +
+      `&selectproperties='${this.docSelectProps}'` +
       `&rowlimit=50` +
       `&sourceid='b09a7990-05ea-4af9-81ef-edfab16c4e31'`;
     return this.executeSearch(searchUrl, 'document');
@@ -67,7 +79,7 @@ export class SpSmartSearchService {
   private async searchListItems(query: string, siteUrl: string): Promise<ISpSmartItem[]> {
     const searchUrl = `${siteUrl}/_api/search/query` +
       `?querytext='${encodeURIComponent(query)} AND Path=${siteUrl} AND contentclass:STS_ListItem'` +
-      `&selectproperties='Title,Path,LastModifiedTime,Author,HitHighlightedSummary,SiteTitle'` +
+      `&selectproperties='${this.listSelectProps}'` +
       `&rowlimit=50`;
     return this.executeSearch(searchUrl, 'listItem');
   }
@@ -75,7 +87,7 @@ export class SpSmartSearchService {
   private async searchDocumentsByLibraryUrl(query: string, siteUrl: string, libraryUrl: string): Promise<ISpSmartItem[]> {
     const searchUrl = `${siteUrl}/_api/search/query` +
       `?querytext='${encodeURIComponent(query)} AND Path=${libraryUrl}'` +
-      `&selectproperties='Title,Path,FileExtension,LastModifiedTime,Author,HitHighlightedSummary'` +
+      `&selectproperties='${this.docSelectProps}'` +
       `&rowlimit=50` +
       `&sourceid='b09a7990-05ea-4af9-81ef-edfab16c4e31'`;
     return this.executeSearch(searchUrl, 'document');
@@ -84,7 +96,7 @@ export class SpSmartSearchService {
   private async searchListItemsByListUrl(query: string, siteUrl: string, listUrl: string): Promise<ISpSmartItem[]> {
     const searchUrl = `${siteUrl}/_api/search/query` +
       `?querytext='${encodeURIComponent(query)} AND Path=${listUrl} AND contentclass:STS_ListItem'` +
-      `&selectproperties='Title,Path,LastModifiedTime,Author,HitHighlightedSummary,SiteTitle'` +
+      `&selectproperties='${this.listSelectProps}'` +
       `&rowlimit=50`;
     return this.executeSearch(searchUrl, 'listItem');
   }
@@ -115,7 +127,22 @@ export class SpSmartSearchService {
       listName: this.getCellValue(row, 'SiteTitle') || undefined,
       modifiedDate: this.getCellValue(row, 'LastModifiedTime') || undefined,
       author: this.getCellValue(row, 'Author') || undefined,
-      summary: this.stripHighlightTags(this.getCellValue(row, 'HitHighlightedSummary'))
+      summary: this.stripHighlightTags(this.getCellValue(row, 'HitHighlightedSummary')),
+      // Custom fields
+      businessArea: this.getCellValue(row, 'BusinessArea') || undefined,
+      bidDate: this.getCellValue(row, 'BidDate') || undefined,
+      estimator: this.getCellValue(row, 'Estimator') || undefined,
+      bid2WinId: this.getCellValue(row, 'Bid2WinID') || undefined,
+      segment: this.getCellValue(row, 'Segment') || undefined,
+      sqYards: this.getCellValue(row, 'SqYards') || undefined,
+      laneMiles: this.getCellValue(row, 'LaneMiles') || undefined,
+      numberOfLots: this.getCellValue(row, 'NumberOfLots') || undefined,
+      city: this.getCellValue(row, 'City') || undefined,
+      county: this.getCellValue(row, 'County') || undefined,
+      state: this.getCellValue(row, 'State') || undefined,
+      zipCode: this.getCellValue(row, 'ZipCode') || undefined,
+      owner: this.getCellValue(row, 'Owner') || undefined,
+      project: this.getCellValue(row, 'Project') || undefined
     };
   }
 
