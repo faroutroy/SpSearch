@@ -9,6 +9,21 @@ export interface ISpSmartItem {
   modifiedDate?: string;
   author?: string;
   summary?: string;
+  // Custom fields
+  businessArea?: string;
+  bidDate?: string;
+  estimator?: string;
+  bid2WinId?: string;
+  segment?: string;
+  sqYards?: string;
+  laneMiles?: string;
+  numberOfLots?: string;
+  city?: string;
+  county?: string;
+  state?: string;
+  zipCode?: string;
+  owner?: string;
+  project?: string;
 }
 
 export type DisplayMode = 'documents' | 'listItems' | 'both';
