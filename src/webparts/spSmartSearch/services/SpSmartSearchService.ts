@@ -4,9 +4,11 @@ import { ISpSmartItem, ISearchResult, DisplayMode } from '../models/ISpSmartItem
 
 export class SpSmartSearchService {
   private context: WebPartContext;
+  private titleField: string;
 
-  constructor(context: WebPartContext) {
+  constructor(context: WebPartContext, titleField: string) {
     this.context = context;
+    this.titleField = titleField || 'auto';
   }
 
   public async search(
@@ -79,8 +81,8 @@ export class SpSmartSearchService {
 
   private readonly listProps: string[] = [
     'Title', 'Path', 'LastModifiedTime', 'Author',
-    'HitHighlightedSummary', 'SiteTitle', 'BusinessArea', 'BidDate',
-    'Estimator', 'Bid2WinID', 'Segment', 'SqYards', 'LaneMiles',
+    'HitHighlightedSummary', 'SiteTitle', 'ListItemID',
+    'BusinessArea', 'BidDate', 'Estimator', 'Bid2WinID', 'Segment', 'SqYards', 'LaneMiles',
     'NumberOfLots', 'City', 'County', 'State', 'ZipCode', 'Owner', 'Project'
   ];
 
@@ -90,8 +92,8 @@ export class SpSmartSearchService {
     const body = {
       request: {
         '__metadata': { 'type': 'Microsoft.Office.Server.Search.REST.SearchRequest' },
-        'Querytext': `(${query}*)`,
-        'QueryTemplate': `{searchTerms} (siteId:{${siteId}} OR siteId:${siteId}) (webId:{${webId}} OR webId:${webId}) path:"${siteUrl}" ContentTypeId:0x0101*`,
+        'Querytext': '(' + query + '*)',
+        'QueryTemplate': '{searchTerms} (siteId:{' + siteId + '} OR siteId:' + siteId + ') (webId:{' + webId + '} OR webId:' + webId + ') path:"' + siteUrl + '" ContentTypeId:0x0101*',
         'SelectProperties': this.buildSelectProperties(this.docProps),
         'RowLimit': 50,
         'BypassResultTypes': true,
@@ -108,8 +110,8 @@ export class SpSmartSearchService {
     const body = {
       request: {
         '__metadata': { 'type': 'Microsoft.Office.Server.Search.REST.SearchRequest' },
-        'Querytext': `(${query}*)`,
-        'QueryTemplate': `{searchTerms} (siteId:{${siteId}} OR siteId:${siteId}) (webId:{${webId}} OR webId:${webId}) path:"${siteUrl}" ContentTypeId:0x0* NOT ContentTypeId:0x0101*`,
+        'Querytext': '(' + query + '*)',
+        'QueryTemplate': '{searchTerms} (siteId:{' + siteId + '} OR siteId:' + siteId + ') (webId:{' + webId + '} OR webId:' + webId + ') path:"' + siteUrl + '" ContentTypeId:0x0* NOT ContentTypeId:0x0101*',
         'SelectProperties': this.buildSelectProperties(this.listProps),
         'RowLimit': 50,
         'BypassResultTypes': true,
@@ -130,8 +132,8 @@ export class SpSmartSearchService {
     const body = {
       request: {
         '__metadata': { 'type': 'Microsoft.Office.Server.Search.REST.SearchRequest' },
-        'Querytext': `(${query}*)`,
-        'QueryTemplate': `{searchTerms} (siteId:{${siteId}} OR siteId:${siteId}) (webId:{${webId}} OR webId:${webId}) (path:"${libraryUrl}" OR ParentLink:"${libraryUrl}*") ContentTypeId:0x0101*`,
+        'Querytext': '(' + query + '*)',
+        'QueryTemplate': '{searchTerms} (siteId:{' + siteId + '} OR siteId:' + siteId + ') (webId:{' + webId + '} OR webId:' + webId + ') (path:"' + libraryUrl + '" OR ParentLink:"' + libraryUrl + '*") ContentTypeId:0x0101*',
         'SelectProperties': this.buildSelectProperties(this.docProps),
         'RowLimit': 50,
         'BypassResultTypes': true,
@@ -152,8 +154,8 @@ export class SpSmartSearchService {
     const body = {
       request: {
         '__metadata': { 'type': 'Microsoft.Office.Server.Search.REST.SearchRequest' },
-        'Querytext': `(${query}*)`,
-        'QueryTemplate': `{searchTerms} (siteId:{${siteId}} OR siteId:${siteId}) (webId:{${webId}} OR webId:${webId}) (path:"${listUrl}" OR ParentLink:"${listUrl}*") ContentTypeId:0x0* NOT ContentTypeId:0x0101*`,
+        'Querytext': '(' + query + '*)',
+        'QueryTemplate': '{searchTerms} (siteId:{' + siteId + '} OR siteId:' + siteId + ') (webId:{' + webId + '} OR webId:' + webId + ') (path:"' + listUrl + '" OR ParentLink:"' + listUrl + '*") ContentTypeId:0x0* NOT ContentTypeId:0x0101*',
         'SelectProperties': this.buildSelectProperties(this.listProps),
         'RowLimit': 50,
         'BypassResultTypes': true,
@@ -169,8 +171,7 @@ export class SpSmartSearchService {
     body: any,
     type: 'document' | 'listItem'
   ): Promise<ISpSmartItem[]> {
-    const searchUrl = `${siteUrl}/_api/search/postquery`;
-
+    const searchUrl = siteUrl + '/_api/search/postquery';
     const options: ISPHttpClientOptions = {
       headers: {
         'Accept': 'application/json;odata=verbose',
@@ -179,18 +180,15 @@ export class SpSmartSearchService {
       },
       body: JSON.stringify(body)
     };
-
     const response: SPHttpClientResponse = await this.context.spHttpClient.post(
       searchUrl,
       SPHttpClient.configurations.v1,
       options
     );
-
     if (!response.ok) {
       const errorText = await response.text();
-      throw new Error(`Search failed (${response.status}): ${errorText}`);
+      throw new Error('Search failed (' + response.status + '): ' + errorText);
     }
-
     const data = await response.json();
     const rows =
       data &&
@@ -203,7 +201,6 @@ export class SpSmartSearchService {
       data.d.postquery.PrimaryQueryResult.RelevantResults.Table.Rows.results
         ? data.d.postquery.PrimaryQueryResult.RelevantResults.Table.Rows.results
         : [];
-
     return rows.map((row: any) => this.mapRowToItem(row, type));
   }
 
@@ -215,10 +212,39 @@ export class SpSmartSearchService {
 
   private mapRowToItem(row: any, type: 'document' | 'listItem'): ISpSmartItem {
     const path = this.getCellValue(row, 'Path');
+    const rawTitle = this.getCellValue(row, 'Title');
+    const bid2WinId = this.getCellValue(row, 'Bid2WinID') || undefined;
+    const project = this.getCellValue(row, 'Project') || undefined;
+    const listItemId = this.getCellValue(row, 'ListItemID') || undefined;
+
+    let displayTitle: string;
+
+    if (type === 'listItem') {
+      if (this.titleField && this.titleField !== 'auto') {
+        const fieldVal = this.getCellValue(row, this.titleField);
+        displayTitle = fieldVal && fieldVal.trim() !== '' ? fieldVal : 'Untitled';
+      } else {
+        const isDispForm = !rawTitle || rawTitle.toLowerCase().indexOf('dispform') !== -1;
+        if (bid2WinId) {
+          displayTitle = bid2WinId;
+        } else if (project) {
+          displayTitle = project;
+        } else if (!isDispForm && rawTitle && rawTitle.trim() !== '') {
+          displayTitle = rawTitle;
+        } else if (listItemId) {
+          displayTitle = 'Item #' + listItemId;
+        } else {
+          displayTitle = 'Untitled';
+        }
+      }
+    } else {
+      displayTitle = (rawTitle && rawTitle.trim() !== '') ? rawTitle : 'Untitled';
+    }
+
     return {
       id: path,
-      title: this.getCellValue(row, 'Title') || 'Untitled',
-      type,
+      title: displayTitle,
+      type: type,
       url: path,
       fileType: this.getCellValue(row, 'FileExtension') || undefined,
       listName: this.getCellValue(row, 'SiteTitle') || undefined,
@@ -228,7 +254,7 @@ export class SpSmartSearchService {
       businessArea: this.getCellValue(row, 'BusinessArea') || undefined,
       bidDate: this.getCellValue(row, 'BidDate') || undefined,
       estimator: this.getCellValue(row, 'Estimator') || undefined,
-      bid2WinId: this.getCellValue(row, 'Bid2WinID') || undefined,
+      bid2WinId: bid2WinId,
       segment: this.getCellValue(row, 'Segment') || undefined,
       sqYards: this.getCellValue(row, 'SqYards') || undefined,
       laneMiles: this.getCellValue(row, 'LaneMiles') || undefined,
@@ -238,7 +264,7 @@ export class SpSmartSearchService {
       state: this.getCellValue(row, 'State') || undefined,
       zipCode: this.getCellValue(row, 'ZipCode') || undefined,
       owner: this.getCellValue(row, 'Owner') || undefined,
-      project: this.getCellValue(row, 'Project') || undefined
+      project: project
     };
   }
 
@@ -258,10 +284,10 @@ export class SpSmartSearchService {
       const url = new URL(listUrl);
       const segments = url.pathname.split('/').filter(Boolean);
       if (segments.length >= 2 && (segments[0] === 'sites' || segments[0] === 'teams')) {
-        return `${url.origin}/${segments[0]}/${segments[1]}`;
+        return url.origin + '/' + segments[0] + '/' + segments[1];
       }
       return url.origin;
-    } catch {
+    } catch (e) {
       return currentSiteUrl;
     }
   }
