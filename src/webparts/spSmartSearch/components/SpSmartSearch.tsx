@@ -17,12 +17,12 @@ const FILE_ICONS: Record<string, string> = {
   default: '📎'
 };
 
-function getFileIcon(fileType?: string): string {
+function getFileIcon(fileType: string | undefined): string {
   if (!fileType) return '📋';
   return FILE_ICONS[fileType.toLowerCase()] || FILE_ICONS.default;
 }
 
-function formatDate(dateStr?: string): string {
+function formatDate(dateStr: string | undefined): string {
   if (!dateStr) return '';
   try {
     return new Date(dateStr).toLocaleDateString();
@@ -47,68 +47,75 @@ function renderTitle(item: ISpSmartItem, config: IColumnConfig): any {
   );
 }
 
-function ResultItemRow(props: { item: ISpSmartItem; config: IColumnConfig }): JSX.Element {
+function ResultItemRow(props: { item: ISpSmartItem; config: IColumnConfig }): any {
   var item = props.item;
   var config = props.config;
-  return (
-    <li className={styles.resultItem}>
-      <div className={styles.resultIcon}>
-        {item.type === 'listItem' ? '📋' : getFileIcon(item.fileType)}
-      </div>
-      <div className={styles.resultContent}>
-        {renderTitle(item, config)}
-        <div className={styles.resultMeta}>
-          {config.showFileType && item.fileType ? <span>{'📄 ' + item.fileType.toUpperCase()}</span> : null}
-          {config.showListName && item.listName ? <span>{'📂 ' + item.listName}</span> : null}
-          {config.showAuthor && item.author ? <span>{'👤 ' + item.author}</span> : null}
-          {config.showModifiedDate && item.modifiedDate ? <span>{'📅 ' + formatDate(item.modifiedDate)}</span> : null}
-        </div>
-        <div className={styles.resultMeta}>
-          {config.showBusinessArea && item.businessArea ? <span>{'🏢 ' + item.businessArea}</span> : null}
-          {config.showSegment && item.segment ? <span>{'🔖 ' + item.segment}</span> : null}
-          {config.showProject && item.project ? <span>{'📋 ' + item.project}</span> : null}
-          {config.showEstimator && item.estimator ? <span>{'👷 ' + item.estimator}</span> : null}
-          {config.showBid2WinId && item.bid2WinId ? <span>{'🆔 ' + item.bid2WinId}</span> : null}
-          {config.showBidDate && item.bidDate ? <span>{'📆 Bid: ' + formatDate(item.bidDate)}</span> : null}
-        </div>
-        <div className={styles.resultMeta}>
-          {config.showCity && item.city ? <span>{'🏙 ' + item.city}</span> : null}
-          {config.showCounty && item.county ? <span>{'🗺 ' + item.county}</span> : null}
-          {config.showState && item.state ? <span>{'📍 ' + item.state}</span> : null}
-          {config.showZipCode && item.zipCode ? <span>{'📮 ' + item.zipCode}</span> : null}
-          {config.showOwner && item.owner ? <span>{'🏠 ' + item.owner}</span> : null}
-        </div>
-        <div className={styles.resultMeta}>
-          {config.showSqYards && item.sqYards ? <span>{'📐 ' + item.sqYards + ' sq yds'}</span> : null}
-          {config.showLaneMiles && item.laneMiles ? <span>{'🛣 ' + item.laneMiles + ' lane mi'}</span> : null}
-          {config.showNumberOfLots && item.numberOfLots ? <span>{'🔢 ' + item.numberOfLots + ' lots'}</span> : null}
-        </div>
-        {item.summary ? (
-          <div
-            className={styles.resultSummary}
-            dangerouslySetInnerHTML={{ __html: item.summary }}
-          />
-        ) : null}
-      </div>
-    </li>
+  return React.createElement(
+    'li',
+    { className: styles.resultItem },
+    React.createElement(
+      'div',
+      { className: styles.resultIcon },
+      item.type === 'listItem' ? '📋' : getFileIcon(item.fileType)
+    ),
+    React.createElement(
+      'div',
+      { className: styles.resultContent },
+      renderTitle(item, config),
+      React.createElement(
+        'div',
+        { className: styles.resultMeta },
+        config.showFileType && item.fileType ? React.createElement('span', null, '📄 ' + item.fileType.toUpperCase()) : null,
+        config.showListName && item.listName ? React.createElement('span', null, '📂 ' + item.listName) : null,
+        config.showAuthor && item.author ? React.createElement('span', null, '👤 ' + item.author) : null,
+        config.showModifiedDate && item.modifiedDate ? React.createElement('span', null, '📅 ' + formatDate(item.modifiedDate)) : null
+      ),
+      React.createElement(
+        'div',
+        { className: styles.resultMeta },
+        config.showBusinessArea && item.businessArea ? React.createElement('span', null, '🏢 ' + item.businessArea) : null,
+        config.showSegment && item.segment ? React.createElement('span', null, '🔖 ' + item.segment) : null,
+        config.showProject && item.project ? React.createElement('span', null, '📋 ' + item.project) : null,
+        config.showEstimator && item.estimator ? React.createElement('span', null, '👷 ' + item.estimator) : null,
+        config.showBid2WinId && item.bid2WinId ? React.createElement('span', null, '🆔 ' + item.bid2WinId) : null,
+        config.showBidDate && item.bidDate ? React.createElement('span', null, '📆 Bid: ' + formatDate(item.bidDate)) : null
+      ),
+      React.createElement(
+        'div',
+        { className: styles.resultMeta },
+        config.showCity && item.city ? React.createElement('span', null, '🏙 ' + item.city) : null,
+        config.showCounty && item.county ? React.createElement('span', null, '🗺 ' + item.county) : null,
+        config.showState && item.state ? React.createElement('span', null, '📍 ' + item.state) : null,
+        config.showZipCode && item.zipCode ? React.createElement('span', null, '📮 ' + item.zipCode) : null,
+        config.showOwner && item.owner ? React.createElement('span', null, '🏠 ' + item.owner) : null
+      ),
+      React.createElement(
+        'div',
+        { className: styles.resultMeta },
+        config.showSqYards && item.sqYards ? React.createElement('span', null, '📐 ' + item.sqYards + ' sq yds') : null,
+        config.showLaneMiles && item.laneMiles ? React.createElement('span', null, '🛣 ' + item.laneMiles + ' lane mi') : null,
+        config.showNumberOfLots && item.numberOfLots ? React.createElement('span', null, '🔢 ' + item.numberOfLots + ' lots') : null
+      ),
+      item.summary ? React.createElement('div', { className: styles.resultSummary, dangerouslySetInnerHTML: { __html: item.summary } }) : null
+    )
   );
 }
 
-function ResultsList(props: { items: ISpSmartItem[]; emptyMessage: string; config: IColumnConfig }): JSX.Element {
+function ResultsList(props: { items: ISpSmartItem[]; emptyMessage: string; config: IColumnConfig }): any {
   if (props.items.length === 0) {
-    return (
-      <div className={styles.noResults}>
-        <div className={styles.noResultsIcon}>🔍</div>
-        <span>{props.emptyMessage}</span>
-      </div>
+    return React.createElement(
+      'div',
+      { className: styles.noResults },
+      React.createElement('div', { className: styles.noResultsIcon }, '🔍'),
+      React.createElement('span', null, props.emptyMessage)
     );
   }
-  return (
-    <ul className={styles.resultsList}>
-      {props.items.map(function(item) {
-        return <ResultItemRow key={item.id} item={item} config={props.config} />;
-      })}
-    </ul>
+  return React.createElement(
+    'ul',
+    { className: styles.resultsList },
+    props.items.map(function(item) {
+      return React.createElement(ResultItemRow, { key: item.id, item: item, config: props.config });
+    })
   );
 }
 
@@ -118,15 +125,16 @@ export const SpSmartSearch: React.FC<ISpSmartSearchProps> = (props) => {
   var searchScope = props.searchScope;
   var scopeUrl = props.scopeUrl;
   var columnConfig = props.columnConfig;
+  var titleField = props.titleField;
 
-  const [searchText, setSearchText] = useState<string>('');
-  const [includeDocuments, setIncludeDocuments] = useState<boolean>(displayMode !== 'listItems');
-  const [includeListItems, setIncludeListItems] = useState<boolean>(displayMode !== 'documents');
-  const [activeTab, setActiveTab] = useState<ActiveTab>('all');
-  const [results, setResults] = useState<ISearchResult | null>(null);
-  const [isLoading, setIsLoading] = useState<boolean>(false);
-  const [errorMessage, setErrorMessage] = useState<string>('');
-  const [hasSearched, setHasSearched] = useState<boolean>(false);
+  const [searchText, setSearchText] = useState('');
+  const [includeDocuments, setIncludeDocuments] = useState(displayMode !== 'listItems');
+  const [includeListItems, setIncludeListItems] = useState(displayMode !== 'documents');
+  const [activeTab, setActiveTab] = useState('all' as ActiveTab);
+  const [results, setResults] = useState(null as ISearchResult | null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
+  const [hasSearched, setHasSearched] = useState(false);
 
   var effectiveDisplayMode: DisplayMode =
     includeDocuments && includeListItems ? 'both' :
@@ -143,10 +151,8 @@ export const SpSmartSearch: React.FC<ISpSmartSearchProps> = (props) => {
     setErrorMessage('');
     setHasSearched(true);
     try {
-      var service = new SpSmartSearchService(context);
-      var searchResults = await service.search(
-        searchText.trim(), effectiveDisplayMode, searchScope, scopeUrl
-      );
+      var service = new SpSmartSearchService(context, titleField);
+      var searchResults = await service.search(searchText.trim(), effectiveDisplayMode, searchScope, scopeUrl);
       setResults(searchResults);
       if (effectiveDisplayMode === 'both') {
         setActiveTab('all');
@@ -161,7 +167,7 @@ export const SpSmartSearch: React.FC<ISpSmartSearchProps> = (props) => {
     } finally {
       setIsLoading(false);
     }
-  }, [searchText, scopeUrl, searchScope, effectiveDisplayMode, context]);
+  }, [searchText, scopeUrl, searchScope, effectiveDisplayMode, context, titleField]);
 
   function handleKeyDown(e: React.KeyboardEvent<HTMLInputElement>): void {
     if (e.key === 'Enter') {
@@ -206,34 +212,25 @@ export const SpSmartSearch: React.FC<ISpSmartSearchProps> = (props) => {
         <div className={styles.checkboxGroup}>
           {displayMode !== 'listItems' ? (
             <label>
-              <input
-                type="checkbox"
-                checked={includeDocuments}
-                onChange={function(e) { setIncludeDocuments(e.target.checked); }}
-              />
+              <input type="checkbox" checked={includeDocuments}
+                onChange={function(e) { setIncludeDocuments(e.target.checked); }} />
               Documents
             </label>
           ) : null}
           {displayMode !== 'documents' ? (
             <label>
-              <input
-                type="checkbox"
-                checked={includeListItems}
-                onChange={function(e) { setIncludeListItems(e.target.checked); }}
-              />
+              <input type="checkbox" checked={includeListItems}
+                onChange={function(e) { setIncludeListItems(e.target.checked); }} />
               List Items
             </label>
           ) : null}
           {displayMode === 'both' ? (
             <label>
-              <input
-                type="checkbox"
-                checked={includeDocuments && includeListItems}
+              <input type="checkbox" checked={includeDocuments && includeListItems}
                 onChange={function(e) {
                   setIncludeDocuments(e.target.checked);
                   setIncludeListItems(e.target.checked);
-                }}
-              />
+                }} />
               Both
             </label>
           ) : null}
@@ -288,11 +285,11 @@ export const SpSmartSearch: React.FC<ISpSmartSearchProps> = (props) => {
           </div>
         ) : null}
         {!isLoading && hasSearched && results ? (
-          <ResultsList
-            items={visibleItems}
-            config={columnConfig}
-            emptyMessage={'No results found for "' + searchText + '"'}
-          />
+          React.createElement(ResultsList, {
+            items: visibleItems,
+            config: columnConfig,
+            emptyMessage: 'No results found for "' + searchText + '"'
+          })
         ) : null}
       </div>
     </div>
