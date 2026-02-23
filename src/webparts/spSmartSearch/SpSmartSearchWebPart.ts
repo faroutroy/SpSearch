@@ -18,6 +18,7 @@ export interface ISpSmartSearchWebPartProps {
   displayMode: DisplayMode;
   searchScope: 'site' | 'url';
   scopeUrl: string;
+  titleField: string;
   showTitle: boolean;
   showAuthor: boolean;
   showModifiedDate: boolean;
@@ -53,6 +54,7 @@ export default class SpSmartSearchWebPart extends BaseClientSideWebPart<ISpSmart
         displayMode: this.properties.displayMode || 'both',
         searchScope: this.properties.searchScope || 'site',
         scopeUrl: this.properties.scopeUrl || '',
+        titleField: this.properties.titleField || 'auto',
         columnConfig: {
           showTitle: this.properties.showTitle !== false,
           showAuthor: this.properties.showAuthor !== false,
@@ -99,173 +101,125 @@ export default class SpSmartSearchWebPart extends BaseClientSideWebPart<ISpSmart
       { key: 'url', text: 'Specific List or Library URL' }
     ];
 
+    const titleFieldOptions: IPropertyPaneDropdownOption[] = [
+      { key: 'auto', text: 'Auto (Bid2Win > Project > Title)' },
+      { key: 'Bid2WinID', text: 'Bid2Win ID' },
+      { key: 'Project', text: 'Project' },
+      { key: 'Title', text: 'Title (raw)' },
+      { key: 'Estimator', text: 'Estimator' },
+      { key: 'Owner', text: 'Owner' },
+      { key: 'City', text: 'City' },
+      { key: 'Segment', text: 'Segment' }
+    ];
+
     const isSiteScope = !this.properties.searchScope || this.properties.searchScope === 'site';
     const isUrlScope = this.properties.searchScope === 'url';
     const isDocumentMode = this.properties.displayMode === 'documents';
     const isListMode = this.properties.displayMode === 'listItems';
 
-    // When scope=URL → only show list item columns
-    // When scope=site and mode=documents → only show document columns
-    // When scope=site and mode=listItems → only show list columns
-    // When scope=site and mode=both → show all columns
     const showDocumentColumns = !isUrlScope && !isListMode;
     const showListColumns = isUrlScope || !isDocumentMode;
+
+    const listColumnFields = [
+      PropertyPaneLabel('listColumnsNote', { text: 'Choose which fields appear in list item results.' }),
+      PropertyPaneToggle('showTitle', { label: 'Title', checked: this.properties.showTitle !== false }),
+      PropertyPaneToggle('showAuthor', { label: 'Author', checked: this.properties.showAuthor !== false }),
+      PropertyPaneToggle('showModifiedDate', { label: 'Modified Date', checked: this.properties.showModifiedDate !== false }),
+      PropertyPaneToggle('showListName', { label: 'List / Site Name', checked: this.properties.showListName !== false }),
+      PropertyPaneToggle('showBusinessArea', { label: 'Business Area', checked: this.properties.showBusinessArea !== false }),
+      PropertyPaneToggle('showBidDate', { label: 'Bid Date', checked: this.properties.showBidDate !== false }),
+      PropertyPaneToggle('showEstimator', { label: 'Estimator', checked: this.properties.showEstimator !== false }),
+      PropertyPaneToggle('showBid2WinId', { label: 'Bid2Win ID', checked: this.properties.showBid2WinId !== false }),
+      PropertyPaneToggle('showSegment', { label: 'Segment', checked: this.properties.showSegment !== false }),
+      PropertyPaneToggle('showSqYards', { label: 'Sq Yards', checked: this.properties.showSqYards !== false }),
+      PropertyPaneToggle('showLaneMiles', { label: 'Lane Miles', checked: this.properties.showLaneMiles !== false }),
+      PropertyPaneToggle('showNumberOfLots', { label: 'Number of Lots', checked: this.properties.showNumberOfLots !== false }),
+      PropertyPaneToggle('showCity', { label: 'City', checked: this.properties.showCity !== false }),
+      PropertyPaneToggle('showCounty', { label: 'County', checked: this.properties.showCounty !== false }),
+      PropertyPaneToggle('showState', { label: 'State', checked: this.properties.showState !== false }),
+      PropertyPaneToggle('showZipCode', { label: 'Zip Code', checked: this.properties.showZipCode !== false }),
+      PropertyPaneToggle('showOwner', { label: 'Owner', checked: this.properties.showOwner !== false }),
+      PropertyPaneToggle('showProject', { label: 'Project', checked: this.properties.showProject !== false })
+    ];
+
+    const docColumnFields = [
+      PropertyPaneLabel('docColumnsNote', { text: 'Choose which fields appear in document results.' }),
+      PropertyPaneToggle('showTitle', { label: 'Title', checked: this.properties.showTitle !== false }),
+      PropertyPaneToggle('showFileType', { label: 'File Type', checked: this.properties.showFileType !== false }),
+      PropertyPaneToggle('showAuthor', { label: 'Author', checked: this.properties.showAuthor !== false }),
+      PropertyPaneToggle('showModifiedDate', { label: 'Modified Date', checked: this.properties.showModifiedDate !== false }),
+      PropertyPaneToggle('showListName', { label: 'Library Name', checked: this.properties.showListName !== false })
+    ];
+
+    const groups: any[] = [
+      {
+        groupName: '📋 Display Options',
+        groupFields: [
+          PropertyPaneDropdown('displayMode', {
+            label: 'Content types to display',
+            options: displayModeOptions,
+            selectedKey: this.properties.displayMode || 'both'
+          }),
+          PropertyPaneLabel('displayModeDescription', {
+            text: this.getDisplayModeDescription()
+          })
+        ]
+      },
+      {
+        groupName: '🔍 Search Scope',
+        groupFields: [
+          PropertyPaneDropdown('searchScope', {
+            label: 'Search scope',
+            options: searchScopeOptions,
+            selectedKey: this.properties.searchScope || 'site'
+          }),
+          PropertyPaneTextField('scopeUrl', {
+            label: isSiteScope ? 'Site URL' : 'List or Library URL',
+            description: isSiteScope
+              ? 'Enter the full URL of the SharePoint site to search'
+              : 'Enter the full URL of a specific list or document library',
+            placeholder: isSiteScope
+              ? 'https://contoso.sharepoint.com/sites/MySite'
+              : 'https://contoso.sharepoint.com/sites/MySite/Lists/MyList',
+            multiline: false,
+            resizable: false
+          }),
+          PropertyPaneLabel('scopeNote', {
+            text: isSiteScope
+              ? '💡 Searches all lists and libraries within this site.'
+              : '💡 Searches only the list or library at the URL above.'
+          }),
+          PropertyPaneDropdown('titleField', {
+            label: 'Display field as Title',
+            options: titleFieldOptions,
+            selectedKey: this.properties.titleField || 'auto'
+          }),
+          PropertyPaneLabel('titleFieldNote', {
+            text: '💡 Choose which field shows as the clickable title in results.'
+          })
+        ]
+      }
+    ];
+
+    if (showListColumns) {
+      groups.push({
+        groupName: '📋 List Item Columns',
+        groupFields: listColumnFields
+      });
+    }
+
+    if (showDocumentColumns) {
+      groups.push({
+        groupName: '📄 Document Columns',
+        groupFields: docColumnFields
+      });
+    }
 
     return {
       pages: [
         {
           header: { description: 'Configure search settings and display options.' },
-          groups: [
-            {
-              groupName: '📋 Display Options',
-              groupFields: [
-                PropertyPaneDropdown('displayMode', {
-                  label: 'Content types to display',
-                  options: displayModeOptions,
-                  selectedKey: this.properties.displayMode || 'both'
-                }),
-                PropertyPaneLabel('displayModeDescription', {
-                  text: this.getDisplayModeDescription()
-                })
-              ]
-            },
-            {
-              groupName: '🔍 Search Scope',
-              groupFields: [
-                PropertyPaneDropdown('searchScope', {
-                  label: 'Search scope',
-                  options: searchScopeOptions,
-                  selectedKey: this.properties.searchScope || 'site'
-                }),
-                PropertyPaneTextField('scopeUrl', {
-                  label: isSiteScope ? 'Site URL' : 'List or Library URL',
-                  description: isSiteScope
-                    ? 'Enter the full URL of the SharePoint site to search'
-                    : 'Enter the full URL of a specific list or document library',
-                  placeholder: isSiteScope
-                    ? 'https://contoso.sharepoint.com/sites/MySite'
-                    : 'https://contoso.sharepoint.com/sites/MySite/Lists/MyList',
-                  multiline: false,
-                  resizable: false
-                }),
-                PropertyPaneLabel('scopeNote', {
-                  text: isSiteScope
-                    ? '💡 Searches all lists and libraries within this site.'
-                    : '💡 Searches only the list or library at the URL above.'
-                })
-              ]
-            },
-            // ── List Item Columns (always shown for URL scope or list mode) ──
-            ...(showListColumns ? [{
-              groupName: '📋 List Item Columns',
-              groupFields: [
-                PropertyPaneLabel('listColumnsNote', {
-                  text: 'Toggle which list item fields appear in results.'
-                }),
-                PropertyPaneToggle('showTitle', {
-                  label: 'Title',
-                  checked: this.properties.showTitle !== false
-                }),
-                PropertyPaneToggle('showAuthor', {
-                  label: 'Author',
-                  checked: this.properties.showAuthor !== false
-                }),
-                PropertyPaneToggle('showModifiedDate', {
-                  label: 'Modified Date',
-                  checked: this.properties.showModifiedDate !== false
-                }),
-                PropertyPaneToggle('showListName', {
-                  label: 'List / Site Name',
-                  checked: this.properties.showListName !== false
-                }),
-                PropertyPaneToggle('showBusinessArea', {
-                  label: 'Business Area',
-                  checked: this.properties.showBusinessArea !== false
-                }),
-                PropertyPaneToggle('showBidDate', {
-                  label: 'Bid Date',
-                  checked: this.properties.showBidDate !== false
-                }),
-                PropertyPaneToggle('showEstimator', {
-                  label: 'Estimator',
-                  checked: this.properties.showEstimator !== false
-                }),
-                PropertyPaneToggle('showBid2WinId', {
-                  label: 'Bid2Win ID',
-                  checked: this.properties.showBid2WinId !== false
-                }),
-                PropertyPaneToggle('showSegment', {
-                  label: 'Segment',
-                  checked: this.properties.showSegment !== false
-                }),
-                PropertyPaneToggle('showSqYards', {
-                  label: 'Sq Yards',
-                  checked: this.properties.showSqYards !== false
-                }),
-                PropertyPaneToggle('showLaneMiles', {
-                  label: 'Lane Miles',
-                  checked: this.properties.showLaneMiles !== false
-                }),
-                PropertyPaneToggle('showNumberOfLots', {
-                  label: 'Number of Lots',
-                  checked: this.properties.showNumberOfLots !== false
-                }),
-                PropertyPaneToggle('showCity', {
-                  label: 'City',
-                  checked: this.properties.showCity !== false
-                }),
-                PropertyPaneToggle('showCounty', {
-                  label: 'County',
-                  checked: this.properties.showCounty !== false
-                }),
-                PropertyPaneToggle('showState', {
-                  label: 'State',
-                  checked: this.properties.showState !== false
-                }),
-                PropertyPaneToggle('showZipCode', {
-                  label: 'Zip Code',
-                  checked: this.properties.showZipCode !== false
-                }),
-                PropertyPaneToggle('showOwner', {
-                  label: 'Owner',
-                  checked: this.properties.showOwner !== false
-                }),
-                PropertyPaneToggle('showProject', {
-                  label: 'Project',
-                  checked: this.properties.showProject !== false
-                })
-              ]
-            }] : []),
-            // ── Document Columns (only shown for site scope + document/both mode) ──
-            ...(showDocumentColumns ? [{
-              groupName: '📄 Document Columns',
-              groupFields: [
-                PropertyPaneLabel('docColumnsNote', {
-                  text: 'Toggle which document fields appear in results.'
-                }),
-                PropertyPaneToggle('showTitle', {
-                  label: 'Title',
-                  checked: this.properties.showTitle !== false
-                }),
-                PropertyPaneToggle('showFileType', {
-                  label: 'File Type',
-                  checked: this.properties.showFileType !== false
-                }),
-                PropertyPaneToggle('showAuthor', {
-                  label: 'Author',
-                  checked: this.properties.showAuthor !== false
-                }),
-                PropertyPaneToggle('showModifiedDate', {
-                  label: 'Modified Date',
-                  checked: this.properties.showModifiedDate !== false
-                }),
-                PropertyPaneToggle('showListName', {
-                  label: 'Library Name',
-                  checked: this.properties.showListName !== false
-                })
-              ]
-            }] : [])
-          ]
+          groups: groups
         }
       ]
     };
