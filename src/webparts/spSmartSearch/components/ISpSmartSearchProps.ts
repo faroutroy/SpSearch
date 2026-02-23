@@ -28,5 +28,6 @@ export interface ISpSmartSearchProps {
   displayMode: DisplayMode;
   searchScope: 'site' | 'url';
   scopeUrl: string;
+  titleField: string;
   columnConfig: IColumnConfig;
 }
