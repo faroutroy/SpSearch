@@ -18,7 +18,6 @@ export interface ISpSmartSearchWebPartProps {
   displayMode: DisplayMode;
   searchScope: 'site' | 'url';
   scopeUrl: string;
-  // Column visibility toggles
   showTitle: boolean;
   showAuthor: boolean;
   showModifiedDate: boolean;
@@ -54,7 +53,6 @@ export default class SpSmartSearchWebPart extends BaseClientSideWebPart<ISpSmart
         displayMode: this.properties.displayMode || 'both',
         searchScope: this.properties.searchScope || 'site',
         scopeUrl: this.properties.scopeUrl || '',
-        // Pass column visibility to component
         columnConfig: {
           showTitle: this.properties.showTitle !== false,
           showAuthor: this.properties.showAuthor !== false,
@@ -74,7 +72,7 @@ export default class SpSmartSearchWebPart extends BaseClientSideWebPart<ISpSmart
           showState: this.properties.showState !== false,
           showZipCode: this.properties.showZipCode !== false,
           showOwner: this.properties.showOwner !== false,
-          showProject: this.properties.showProject !== false,
+          showProject: this.properties.showProject !== false
         }
       }
     );
@@ -102,6 +100,16 @@ export default class SpSmartSearchWebPart extends BaseClientSideWebPart<ISpSmart
     ];
 
     const isSiteScope = !this.properties.searchScope || this.properties.searchScope === 'site';
+    const isUrlScope = this.properties.searchScope === 'url';
+    const isDocumentMode = this.properties.displayMode === 'documents';
+    const isListMode = this.properties.displayMode === 'listItems';
+
+    // When scope=URL → only show list item columns
+    // When scope=site and mode=documents → only show document columns
+    // When scope=site and mode=listItems → only show list columns
+    // When scope=site and mode=both → show all columns
+    const showDocumentColumns = !isUrlScope && !isListMode;
+    const showListColumns = isUrlScope || !isDocumentMode;
 
     return {
       pages: [
@@ -147,11 +155,12 @@ export default class SpSmartSearchWebPart extends BaseClientSideWebPart<ISpSmart
                 })
               ]
             },
-            {
-              groupName: '🗂 Columns to Display',
+            // ── List Item Columns (always shown for URL scope or list mode) ──
+            ...(showListColumns ? [{
+              groupName: '📋 List Item Columns',
               groupFields: [
-                PropertyPaneLabel('columnsNote', {
-                  text: 'Toggle which columns appear in search results.'
+                PropertyPaneLabel('listColumnsNote', {
+                  text: 'Toggle which list item fields appear in results.'
                 }),
                 PropertyPaneToggle('showTitle', {
                   label: 'Title',
@@ -164,10 +173,6 @@ export default class SpSmartSearchWebPart extends BaseClientSideWebPart<ISpSmart
                 PropertyPaneToggle('showModifiedDate', {
                   label: 'Modified Date',
                   checked: this.properties.showModifiedDate !== false
-                }),
-                PropertyPaneToggle('showFileType', {
-                  label: 'File Type',
-                  checked: this.properties.showFileType !== false
                 }),
                 PropertyPaneToggle('showListName', {
                   label: 'List / Site Name',
@@ -230,7 +235,36 @@ export default class SpSmartSearchWebPart extends BaseClientSideWebPart<ISpSmart
                   checked: this.properties.showProject !== false
                 })
               ]
-            }
+            }] : []),
+            // ── Document Columns (only shown for site scope + document/both mode) ──
+            ...(showDocumentColumns ? [{
+              groupName: '📄 Document Columns',
+              groupFields: [
+                PropertyPaneLabel('docColumnsNote', {
+                  text: 'Toggle which document fields appear in results.'
+                }),
+                PropertyPaneToggle('showTitle', {
+                  label: 'Title',
+                  checked: this.properties.showTitle !== false
+                }),
+                PropertyPaneToggle('showFileType', {
+                  label: 'File Type',
+                  checked: this.properties.showFileType !== false
+                }),
+                PropertyPaneToggle('showAuthor', {
+                  label: 'Author',
+                  checked: this.properties.showAuthor !== false
+                }),
+                PropertyPaneToggle('showModifiedDate', {
+                  label: 'Modified Date',
+                  checked: this.properties.showModifiedDate !== false
+                }),
+                PropertyPaneToggle('showListName', {
+                  label: 'Library Name',
+                  checked: this.properties.showListName !== false
+                })
+              ]
+            }] : [])
           ]
         }
       ]
