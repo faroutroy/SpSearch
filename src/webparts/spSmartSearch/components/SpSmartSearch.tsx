@@ -1,7 +1,7 @@
 import * as React from 'react';
 import { useState, useCallback } from 'react';
 import styles from './SpSmartSearch.module.scss';
-import { ISpSmartSearchProps } from './ISpSmartSearchProps';
+import { ISpSmartSearchProps, IColumnConfig } from './ISpSmartSearchProps';
 import { ISpSmartItem, ISearchResult, DisplayMode } from '../models/ISpSmartItem';
 import { SpSmartSearchService } from '../services/SpSmartSearchService';
 
@@ -28,51 +28,120 @@ function formatDate(dateStr?: string): string {
   catch { return ''; }
 }
 
-const ResultItemRow: React.FC<{ item: ISpSmartItem }> = ({ item }) => (
-  <li className={styles.resultItem}>
-    <div className={styles.resultIcon}>
-      {item.type === 'listItem' ? '📋' : getFileIcon(item.fileType)}
-    </div>
-    <div className={styles.resultContent}>
-      <a href={item.url} target="_blank" rel="noopener noreferrer"
-        className={styles.resultTitle} title={item.title}>
-        {item.title}
-      </a>
-      <div className={styles.resultMeta}>
-        {item.fileType && <span>📄 {item.fileType.toUpperCase()}</span>}
-        {item.listName && <span>📂 {item.listName}</span>}
-        {item.author && <span>👤 {item.author}</span>}
-        {item.modifiedDate && <span>📅 Modified {formatDate(item.modifiedDate)}</span>}
-      </div>
-      <div className={styles.resultMeta}>
-        {item.businessArea && <span>🏢 {item.businessArea}</span>}
-        {item.segment && <span>🔖 {item.segment}</span>}
-        {item.project && <span>📋 {item.project}</span>}
-        {item.estimator && <span>👷 {item.estimator}</span>}
-        {item.bid2WinId && <span>🆔 {item.bid2WinId}</span>}
-        {item.bidDate && <span>📆 Bid: {formatDate(item.bidDate)}</span>}
-      </div>
-      <div className={styles.resultMeta}>
-        {item.city && <span>🏙 {item.city}</span>}
-        {item.county && <span>🗺 {item.county}</span>}
-        {item.state && <span>📍 {item.state}</span>}
-        {item.zipCode && <span>📮 {item.zipCode}</span>}
-        {item.owner && <span>🏠 {item.owner}</span>}
-      </div>
-      <div className={styles.resultMeta}>
-        {item.sqYards && <span>📐 {item.sqYards} sq yds</span>}
-        {item.laneMiles && <span>🛣 {item.laneMiles} lane mi</span>}
-        {item.numberOfLots && <span>🔢 {item.numberOfLots} lots</span>}
-      </div>
-      {item.summary && (
-        <div className={styles.resultSummary}
-          dangerouslySetInnerHTML={{ __html: item.summary }} />
-      )}
-    </div>
-  </li>
-);
+// ── Result row respects column config ──────────────────────────────────────
+const ResultItemRow: React.FC<{ item: ISpSmartItem; config: IColumnConfig }> = ({ item, config }) => {
 
-const ResultsList: React.FC<{ items: ISpSmartItem[]; emptyMessage: string }> = ({ items, emptyMessage }) => {
+  // Title fallback: if showTitle is ON but value is empty, show "Untitled"
+  const titleDisplay = config.showTitle
+    ? (item.title && item.title.trim() !== '' ? item.title : 'Untitled')
+    : null;
+
+  return (
+    <li className={styles.resultItem}>
+      <div className={styles.resultIcon}>
+        {item.type === 'listItem' ? '📋' : getFileIcon(item.fileType)}
+      </div>
+      <div className={styles.resultContent}>
+
+        {/* Title row */}
+        {titleDisplay !== null && (
+          
+            href={item.url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className={styles.resultTitle}
+            title={titleDisplay}
+          >
+            {titleDisplay}
+          </a>
+        )}
+
+        {/* Row 1 — basic metadata */}
+        <div className={styles.resultMeta}>
+          {config.showFileType && item.fileType && (
+            <span>📄 {item.fileType.toUpperCase()}</span>
+          )}
+          {config.showListName && item.listName && (
+            <span>📂 {item.listName}</span>
+          )}
+          {config.showAuthor && item.author && (
+            <span>👤 {item.author}</span>
+          )}
+          {config.showModifiedDate && item.modifiedDate && (
+            <span>📅 {formatDate(item.modifiedDate)}</span>
+          )}
+        </div>
+
+        {/* Row 2 — business fields */}
+        <div className={styles.resultMeta}>
+          {config.showBusinessArea && item.businessArea && (
+            <span>🏢 {item.businessArea}</span>
+          )}
+          {config.showSegment && item.segment && (
+            <span>🔖 {item.segment}</span>
+          )}
+          {config.showProject && item.project && (
+            <span>📋 {item.project}</span>
+          )}
+          {config.showEstimator && item.estimator && (
+            <span>👷 {item.estimator}</span>
+          )}
+          {config.showBid2WinId && item.bid2WinId && (
+            <span>🆔 {item.bid2WinId}</span>
+          )}
+          {config.showBidDate && item.bidDate && (
+            <span>📆 Bid: {formatDate(item.bidDate)}</span>
+          )}
+        </div>
+
+        {/* Row 3 — location fields */}
+        <div className={styles.resultMeta}>
+          {config.showCity && item.city && (
+            <span>🏙 {item.city}</span>
+          )}
+          {config.showCounty && item.county && (
+            <span>🗺 {item.county}</span>
+          )}
+          {config.showState && item.state && (
+            <span>📍 {item.state}</span>
+          )}
+          {config.showZipCode && item.zipCode && (
+            <span>📮 {item.zipCode}</span>
+          )}
+          {config.showOwner && item.owner && (
+            <span>🏠 {item.owner}</span>
+          )}
+        </div>
+
+        {/* Row 4 — measurement fields */}
+        <div className={styles.resultMeta}>
+          {config.showSqYards && item.sqYards && (
+            <span>📐 {item.sqYards} sq yds</span>
+          )}
+          {config.showLaneMiles && item.laneMiles && (
+            <span>🛣 {item.laneMiles} lane mi</span>
+          )}
+          {config.showNumberOfLots && item.numberOfLots && (
+            <span>🔢 {item.numberOfLots} lots</span>
+          )}
+        </div>
+
+        {item.summary && (
+          <div
+            className={styles.resultSummary}
+            dangerouslySetInnerHTML={{ __html: item.summary }}
+          />
+        )}
+      </div>
+    </li>
+  );
+};
+
+const ResultsList: React.FC<{
+  items: ISpSmartItem[];
+  emptyMessage: string;
+  config: IColumnConfig;
+}> = ({ items, emptyMessage, config }) => {
   if (items.length === 0) {
     return (
       <div className={styles.noResults}>
@@ -83,13 +152,16 @@ const ResultsList: React.FC<{ items: ISpSmartItem[]; emptyMessage: string }> = (
   }
   return (
     <ul className={styles.resultsList}>
-      {items.map(item => <ResultItemRow key={item.id} item={item} />)}
+      {items.map(item => (
+        <ResultItemRow key={item.id} item={item} config={config} />
+      ))}
     </ul>
   );
 };
 
+// ── Main component ──────────────────────────────────────────────────────────
 export const SpSmartSearch: React.FC<ISpSmartSearchProps> = (props) => {
-  const { context, displayMode, searchScope, scopeUrl } = props;
+  const { context, displayMode, searchScope, scopeUrl, columnConfig } = props;
 
   const [searchText, setSearchText] = useState<string>('');
   const [includeDocuments, setIncludeDocuments] = useState<boolean>(displayMode !== 'listItems');
@@ -139,7 +211,7 @@ export const SpSmartSearch: React.FC<ISpSmartSearchProps> = (props) => {
     return (
       <div className={styles.configRequired}>
         <h3>Configuration Required</h3>
-        <p>Open the web part properties panel and provide a Site URL or List/Library URL to enable search.</p>
+        <p>Open the web part properties panel and provide a Site URL or List/Library URL.</p>
       </div>
     );
   }
@@ -149,14 +221,16 @@ export const SpSmartSearch: React.FC<ISpSmartSearchProps> = (props) => {
     : [];
 
   const visibleItems: ISpSmartItem[] =
-    activeTab === 'documents' ? (results?.documents || []) :
-    activeTab === 'listItems' ? (results?.listItems || []) :
+    activeTab === 'documents' ? (results ? results.documents : []) :
+    activeTab === 'listItems' ? (results ? results.listItems : []) :
     allItems;
 
   const showTabs = effectiveDisplayMode === 'both';
 
   return (
     <div className={styles.spSmartSearch}>
+
+      {/* Search bar */}
       <div className={styles.searchBar}>
         <input
           type="text"
@@ -202,10 +276,12 @@ export const SpSmartSearch: React.FC<ISpSmartSearchProps> = (props) => {
         </button>
       </div>
 
+      {/* Error */}
       {errorMessage && (
         <div className={styles.errorMessage} role="alert">{errorMessage}</div>
       )}
 
+      {/* Tabs */}
       {showTabs && results && (
         <div className={styles.tabContainer} role="tablist">
           <button role="tab" aria-selected={activeTab === 'all'}
@@ -226,6 +302,7 @@ export const SpSmartSearch: React.FC<ISpSmartSearchProps> = (props) => {
         </div>
       )}
 
+      {/* Results */}
       <div className={styles.resultsContainer}>
         {isLoading && (
           <div className={styles.loadingSpinner} aria-live="polite">Searching…</div>
@@ -238,6 +315,7 @@ export const SpSmartSearch: React.FC<ISpSmartSearchProps> = (props) => {
         {!isLoading && hasSearched && results && (
           <ResultsList
             items={visibleItems}
+            config={columnConfig}
             emptyMessage={`No ${activeTab === 'documents' ? 'documents' : activeTab === 'listItems' ? 'list items' : 'results'} found for "${searchText}"`}
           />
         )}
