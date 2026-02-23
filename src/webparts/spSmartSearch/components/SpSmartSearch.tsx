@@ -31,19 +31,19 @@ function formatDate(dateStr?: string): string {
   }
 }
 
-function renderTitle(item: ISpSmartItem, config: IColumnConfig): JSX.Element | null {
-  if (!config.showTitle) return null;
-  const titleDisplay = (item.title && item.title.trim() !== '') ? item.title : 'Untitled';
-  return (
-    
-      href={item.url}
-      target="_blank"
-      rel="noopener noreferrer"
-      className={styles.resultTitle}
-      title={titleDisplay}
-    >
-      {titleDisplay}
-    </a>
+function renderTitle(item: ISpSmartItem, config: IColumnConfig): any {
+  if (!config.showTitle) { return null; }
+  var titleDisplay = (item.title && item.title.trim() !== '') ? item.title : 'Untitled';
+  return React.createElement(
+    'a',
+    {
+      href: item.url,
+      target: '_blank',
+      rel: 'noopener noreferrer',
+      className: styles.resultTitle,
+      title: titleDisplay
+    },
+    titleDisplay
   );
 }
 
