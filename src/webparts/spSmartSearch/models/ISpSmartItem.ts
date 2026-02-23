@@ -9,7 +9,6 @@ export interface ISpSmartItem {
   modifiedDate?: string;
   author?: string;
   summary?: string;
-  // Custom fields
   businessArea?: string;
   bidDate?: string;
   estimator?: string;
