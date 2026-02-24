@@ -4,7 +4,9 @@ import { Version } from '@microsoft/sp-core-library';
 import {
   IPropertyPaneConfiguration,
   PropertyPaneTextField,
-  PropertyPaneDropdown
+  PropertyPaneDropdown,
+  PropertyPaneLabel,
+  IPropertyPaneDropdownOption
 } from '@microsoft/sp-property-pane';
 import { BaseClientSideWebPart } from '@microsoft/sp-webpart-base';
 import { SpSmartSearch } from './components/SpSmartSearch';
@@ -12,26 +14,31 @@ import { ISpSmartSearchProps } from './components/ISpSmartSearchProps';
 import { DisplayMode } from './models/ISpSmartItem';
 
 export interface ISpSmartSearchWebPartProps {
+  displayMode: DisplayMode;
   searchScope: 'site' | 'url';
   scopeUrl: string;
-  titleField: string;
-  displayColumn: string;
+  titleColumn: string;
+  displayColumns: string;
 }
 
 export default class SpSmartSearchWebPart extends BaseClientSideWebPart<ISpSmartSearchWebPartProps> {
+
+  protected onInit(): Promise<void> {
+    return super.onInit();
+  }
+
   public render(): void {
     const element: React.ReactElement<ISpSmartSearchProps> = React.createElement(
       SpSmartSearch,
       {
         context: this.context,
-        displayMode: this.displayMode,           // kept for compatibility (edit/view mode)
-        searchScope: this.properties.searchScope || 'site',
+        displayMode: this.properties.displayMode || 'listItems',
+        searchScope: this.properties.searchScope || 'url',
         scopeUrl: this.properties.scopeUrl || '',
-        titleField: this.properties.titleField || 'Title',
-        displayColumn: this.properties.displayColumn || ''
+        titleColumn: this.properties.titleColumn || '',
+        displayColumns: this.properties.displayColumns || ''
       }
     );
-
     ReactDom.render(element, this.domElement);
   }
 
@@ -40,40 +47,80 @@ export default class SpSmartSearchWebPart extends BaseClientSideWebPart<ISpSmart
   }
 
   protected get dataVersion(): Version {
-    return Version.parse('1.0.0');
+    return Version.parse('1.0');
   }
 
   protected getPropertyPaneConfiguration(): IPropertyPaneConfiguration {
+    const displayModeOptions: IPropertyPaneDropdownOption[] = [
+      { key: 'both', text: 'Both (Documents & List Items with tabs)' },
+      { key: 'documents', text: 'Documents only' },
+      { key: 'listItems', text: 'List Items only' }
+    ];
+
+    const searchScopeOptions: IPropertyPaneDropdownOption[] = [
+      { key: 'site', text: 'Entire Site (all lists & libraries)' },
+      { key: 'url', text: 'Specific List or Library URL' }
+    ];
+
+    const isSiteScope = !this.properties.searchScope || this.properties.searchScope === 'site';
+
     return {
       pages: [
         {
-          header: {
-            description: "SharePoint Smart Search Configuration"
-          },
+          header: { description: 'Configure search settings and display options.' },
           groups: [
             {
-              groupName: "Search Settings",
+              groupName: '📋 Display Options',
               groupFields: [
-                PropertyPaneTextField('titleField', {
-                  label: 'Title Field',
-                  description: 'Field to use as the title for search results'
-                }),
+                PropertyPaneDropdown('displayMode', {
+                  label: 'Content types to display',
+                  options: displayModeOptions,
+                  selectedKey: this.properties.displayMode || 'listItems'
+                })
+              ]
+            },
+            {
+              groupName: '🔍 Search Scope',
+              groupFields: [
                 PropertyPaneDropdown('searchScope', {
-                  label: 'Search Scope',
-                  options: [
-                    { key: 'site', text: 'Current Site' },
-                    { key: 'url', text: 'Specific URL' }
-                  ]
+                  label: 'Search scope',
+                  options: searchScopeOptions,
+                  selectedKey: this.properties.searchScope || 'url'
                 }),
                 PropertyPaneTextField('scopeUrl', {
-                  label: 'Scope URL',
-                  description: 'Only used when Specific URL is selected',
-                  disabled: this.properties.searchScope !== 'url'
+                  label: isSiteScope ? 'Site URL' : 'List or Library URL',
+                  description: isSiteScope
+                    ? 'Enter the full URL of the SharePoint site to search'
+                    : 'Enter the full URL of a specific list or document library',
+                  placeholder: isSiteScope
+                    ? 'https://contoso.sharepoint.com/sites/MySite'
+                    : 'https://contoso.sharepoint.com/sites/MySite/Lists/MyList',
+                  multiline: false,
+                  resizable: false
+                })
+              ]
+            },
+            {
+              groupName: '🏷 Column Settings',
+              groupFields: [
+                PropertyPaneTextField('titleColumn', {
+                  label: 'Title Column',
+                  description: 'Internal column name to show as the result title. Example: Bid2WinID, Project, Title',
+                  placeholder: 'e.g. Bid2WinID'
                 }),
-                PropertyPaneTextField('displayColumn', {
-                  label: 'Column Name to Display',
-                  description: 'Internal name of the column (e.g. Metro, Project_x0020_Name). This value will replace the old DisplayForm link in every result.',
-                  placeholder: 'Metro'
+                PropertyPaneLabel('titleColumnNote', {
+                  text: '💡 The value of this column will appear as the title for each result row.'
+                }),
+                PropertyPaneTextField('displayColumns', {
+                  label: 'Additional Columns to Display',
+                  description: 'Enter internal column names separated by commas to show as metadata under each result.',
+                  placeholder: 'e.g. Estimator,City,State,BidDate,Segment',
+                  multiline: true,
+                  resizable: false,
+                  rows: 4
+                }),
+                PropertyPaneLabel('displayColumnsNote', {
+                  text: '💡 Use exact internal column names from your SharePoint list. Separate multiple columns with commas.'
                 })
               ]
             }
