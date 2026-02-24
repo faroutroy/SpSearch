@@ -18,6 +18,7 @@ declare const styles: {
   readonly resultContent: string;
   readonly resultTitle: string;
   readonly resultMeta: string;
+  readonly metaItem: string;
   readonly resultSummary: string;
   readonly errorMessage: string;
   readonly configRequired: string;
