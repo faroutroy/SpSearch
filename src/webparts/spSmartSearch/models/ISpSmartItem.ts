@@ -23,6 +23,9 @@ export interface ISpSmartItem {
   zipCode?: string;
   owner?: string;
   project?: string;
+
+  // 🔥 allow dynamic property access (important)
+  [key: string]: any;
 }
 
 export type DisplayMode = 'documents' | 'listItems' | 'both';
