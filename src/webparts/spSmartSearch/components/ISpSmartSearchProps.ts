@@ -7,5 +7,4 @@ export interface ISpSmartSearchProps {
   searchScope: 'site' | 'url';
   scopeUrl: string;
   titleColumn: string;
-  displayColumns: string;
 }
