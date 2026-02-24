@@ -7,114 +7,118 @@ import { SpSmartSearchService } from '../services/SpSmartSearchService';
 
 type ActiveTab = 'documents' | 'listItems' | 'all';
 
-const FILE_ICONS: Record<string, string> = {
-  docx: '📄', doc: '📄',
-  xlsx: '📊', xls: '📊',
-  pptx: '📑', ppt: '📑',
-  pdf: '📕', txt: '📃',
-  png: '🖼', jpg: '🖼', jpeg: '🖼',
-  zip: '🗜', msg: '📧',
-  default: '📎'
-};
-
-function getFileIcon(fileType: string | undefined): string {
-  if (!fileType) return '📋';
-  return FILE_ICONS[fileType.toLowerCase()] || FILE_ICONS.default;
-}
-
-function formatDate(dateStr: string | undefined): string {
-  if (!dateStr) return '';
+function formatDate(val: string): string {
+  if (!val) return '';
   try {
-    return new Date(dateStr).toLocaleDateString();
+    var d = new Date(val);
+    if (isNaN(d.getTime())) return val;
+    return d.toLocaleDateString();
   } catch (e) {
-    return '';
+    return val;
   }
 }
 
-function renderTitle(item: ISpSmartItem, config: IColumnConfig): any {
-  if (!config.showTitle) { return null; }
-  var titleDisplay = (item.title && item.title.trim() !== '') ? item.title : 'Untitled';
-  return React.createElement(
-    'a',
-    {
-      href: item.url,
-      target: '_blank',
-      rel: 'noopener noreferrer',
-      className: styles.resultTitle,
-      title: titleDisplay
-    },
-    titleDisplay
-  );
+function parseColumns(raw: string): string[] {
+  if (!raw || raw.trim() === '') return [];
+  return raw.split(',').map(function(c) { return c.trim(); }).filter(function(c) { return c !== ''; });
 }
 
-function ResultItemRow(props: { item: ISpSmartItem; config: IColumnConfig }): any {
+function getFieldValue(item: ISpSmartItem, fieldName: string): string {
+  if (!fieldName || fieldName.trim() === '') return '';
+  var key = fieldName.trim();
+  var val = (item as any)[key];
+  if (val !== undefined && val !== null && String(val).trim() !== '') return String(val);
+  // try camelCase first letter
+  var camel = key.charAt(0).toLowerCase() + key.slice(1);
+  var val2 = (item as any)[camel];
+  if (val2 !== undefined && val2 !== null && String(val2).trim() !== '') return String(val2);
+  return '';
+}
+
+function resolveTitleValue(item: ISpSmartItem, titleColumn: string): string {
+  // 1. Try the user-specified title column
+  if (titleColumn && titleColumn.trim() !== '') {
+    var fromCol = getFieldValue(item, titleColumn);
+    if (fromCol && fromCol.trim() !== '') return fromCol;
+  }
+  // 2. Auto fallback — avoid DispForm.aspx
+  var isDispForm = !item.title || item.title.toLowerCase().indexOf('dispform') !== -1;
+  if (item.bid2WinId && item.bid2WinId.trim() !== '') return item.bid2WinId;
+  if (item.project && item.project.trim() !== '') return item.project;
+  if (!isDispForm && item.title && item.title.trim() !== '') return item.title;
+  return 'Untitled Item';
+}
+
+function ResultItemRow(props: {
+  item: ISpSmartItem;
+  titleColumn: string;
+  displayColumns: string[];
+}): any {
   var item = props.item;
-  var config = props.config;
+  var titleValue = resolveTitleValue(item, props.titleColumn);
+
+  var metaSpans: any[] = [];
+  props.displayColumns.forEach(function(col) {
+    var val = getFieldValue(item, col);
+    if (!val || val.trim() === '') return;
+    if (col.toLowerCase().indexOf('date') !== -1) {
+      val = formatDate(val);
+    }
+    metaSpans.push(
+      React.createElement('span', { key: col, className: styles.metaItem },
+        React.createElement('strong', null, col + ': '),
+        val
+      )
+    );
+  });
+
   return React.createElement(
     'li',
     { className: styles.resultItem },
-    React.createElement(
-      'div',
-      { className: styles.resultIcon },
-      item.type === 'listItem' ? '📋' : getFileIcon(item.fileType)
+    React.createElement('div', { className: styles.resultIcon },
+      item.type === 'listItem' ? '📋' : '📄'
     ),
-    React.createElement(
-      'div',
-      { className: styles.resultContent },
-      renderTitle(item, config),
-      React.createElement(
-        'div',
-        { className: styles.resultMeta },
-        config.showFileType && item.fileType ? React.createElement('span', null, '📄 ' + item.fileType.toUpperCase()) : null,
-        config.showListName && item.listName ? React.createElement('span', null, '📂 ' + item.listName) : null,
-        config.showAuthor && item.author ? React.createElement('span', null, '👤 ' + item.author) : null,
-        config.showModifiedDate && item.modifiedDate ? React.createElement('span', null, '📅 ' + formatDate(item.modifiedDate)) : null
-      ),
-      React.createElement(
-        'div',
-        { className: styles.resultMeta },
-        config.showBusinessArea && item.businessArea ? React.createElement('span', null, '🏢 ' + item.businessArea) : null,
-        config.showSegment && item.segment ? React.createElement('span', null, '🔖 ' + item.segment) : null,
-        config.showProject && item.project ? React.createElement('span', null, '📋 ' + item.project) : null,
-        config.showEstimator && item.estimator ? React.createElement('span', null, '👷 ' + item.estimator) : null,
-        config.showBid2WinId && item.bid2WinId ? React.createElement('span', null, '🆔 ' + item.bid2WinId) : null,
-        config.showBidDate && item.bidDate ? React.createElement('span', null, '📆 Bid: ' + formatDate(item.bidDate)) : null
-      ),
-      React.createElement(
-        'div',
-        { className: styles.resultMeta },
-        config.showCity && item.city ? React.createElement('span', null, '🏙 ' + item.city) : null,
-        config.showCounty && item.county ? React.createElement('span', null, '🗺 ' + item.county) : null,
-        config.showState && item.state ? React.createElement('span', null, '📍 ' + item.state) : null,
-        config.showZipCode && item.zipCode ? React.createElement('span', null, '📮 ' + item.zipCode) : null,
-        config.showOwner && item.owner ? React.createElement('span', null, '🏠 ' + item.owner) : null
-      ),
-      React.createElement(
-        'div',
-        { className: styles.resultMeta },
-        config.showSqYards && item.sqYards ? React.createElement('span', null, '📐 ' + item.sqYards + ' sq yds') : null,
-        config.showLaneMiles && item.laneMiles ? React.createElement('span', null, '🛣 ' + item.laneMiles + ' lane mi') : null,
-        config.showNumberOfLots && item.numberOfLots ? React.createElement('span', null, '🔢 ' + item.numberOfLots + ' lots') : null
-      ),
-      item.summary ? React.createElement('div', { className: styles.resultSummary, dangerouslySetInnerHTML: { __html: item.summary } }) : null
+    React.createElement('div', { className: styles.resultContent },
+      React.createElement('a', {
+        href: item.url,
+        target: '_blank',
+        rel: 'noopener noreferrer',
+        className: styles.resultTitle,
+        title: titleValue
+      }, titleValue),
+      metaSpans.length > 0
+        ? React.createElement('div', { className: styles.resultMeta }, metaSpans)
+        : null,
+      item.summary
+        ? React.createElement('div', {
+            className: styles.resultSummary,
+            dangerouslySetInnerHTML: { __html: item.summary }
+          })
+        : null
     )
   );
 }
 
-function ResultsList(props: { items: ISpSmartItem[]; emptyMessage: string; config: IColumnConfig }): any {
+function ResultsList(props: {
+  items: ISpSmartItem[];
+  emptyMessage: string;
+  titleColumn: string;
+  displayColumns: string[];
+}): any {
   if (props.items.length === 0) {
-    return React.createElement(
-      'div',
-      { className: styles.noResults },
+    return React.createElement('div', { className: styles.noResults },
       React.createElement('div', { className: styles.noResultsIcon }, '🔍'),
       React.createElement('span', null, props.emptyMessage)
     );
   }
-  return React.createElement(
-    'ul',
-    { className: styles.resultsList },
+  return React.createElement('ul', { className: styles.resultsList },
     props.items.map(function(item) {
-      return React.createElement(ResultItemRow, { key: item.id, item: item, config: props.config });
+      return React.createElement(ResultItemRow, {
+        key: item.id,
+        item: item,
+        titleColumn: props.titleColumn,
+        displayColumns: props.displayColumns
+      });
     })
   );
 }
@@ -124,14 +128,14 @@ export const SpSmartSearch: React.FC<ISpSmartSearchProps> = (props) => {
   var displayMode = props.displayMode;
   var searchScope = props.searchScope;
   var scopeUrl = props.scopeUrl;
-  var columnConfig = props.columnConfig;
-  var titleField = props.titleField;
+  var titleColumn = props.titleColumn;
+  var displayColumns = parseColumns(props.displayColumns);
 
   const [searchText, setSearchText] = useState('');
   const [includeDocuments, setIncludeDocuments] = useState(displayMode !== 'listItems');
   const [includeListItems, setIncludeListItems] = useState(displayMode !== 'documents');
-   [activeTab, setActiveTab] = useState('all' as ActiveTab);
-   [results, setResults] = useState(null as ISearchResult | null);
+  const [activeTab, setActiveTab] = useState('all' as ActiveTab);
+  const [results, setResults] = useState(null as ISearchResult | null);
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
   const [hasSearched, setHasSearched] = useState(false);
@@ -151,8 +155,10 @@ export const SpSmartSearch: React.FC<ISpSmartSearchProps> = (props) => {
     setErrorMessage('');
     setHasSearched(true);
     try {
-      var service = new SpSmartSearchService(context, titleField);
-      var searchResults = await service.search(searchText.trim(), effectiveDisplayMode, searchScope, scopeUrl);
+      var service = new SpSmartSearchService(context, titleColumn);
+      var searchResults = await service.search(
+        searchText.trim(), effectiveDisplayMode, searchScope, scopeUrl
+      );
       setResults(searchResults);
       if (effectiveDisplayMode === 'both') {
         setActiveTab('all');
@@ -167,7 +173,7 @@ export const SpSmartSearch: React.FC<ISpSmartSearchProps> = (props) => {
     } finally {
       setIsLoading(false);
     }
-  }, [searchText, scopeUrl, searchScope, effectiveDisplayMode, context, titleField]);
+  }, [searchText, scopeUrl, searchScope, effectiveDisplayMode, context, titleColumn]);
 
   function handleKeyDown(e: React.KeyboardEvent<HTMLInputElement>): void {
     if (e.key === 'Enter') {
@@ -199,6 +205,7 @@ export const SpSmartSearch: React.FC<ISpSmartSearchProps> = (props) => {
 
   return (
     <div className={styles.spSmartSearch}>
+
       <div className={styles.searchBar}>
         <input
           type="text"
@@ -251,25 +258,19 @@ export const SpSmartSearch: React.FC<ISpSmartSearchProps> = (props) => {
 
       {showTabs && results ? (
         <div className={styles.tabContainer} role="tablist">
-          <button
-            role="tab"
+          <button role="tab"
             className={styles.tab + (activeTab === 'all' ? ' ' + styles.activeTab : '')}
-            onClick={function() { setActiveTab('all'); }}
-          >
+            onClick={function() { setActiveTab('all'); }}>
             {'All (' + allItems.length + ')'}
           </button>
-          <button
-            role="tab"
+          <button role="tab"
             className={styles.tab + (activeTab === 'documents' ? ' ' + styles.activeTab : '')}
-            onClick={function() { setActiveTab('documents'); }}
-          >
+            onClick={function() { setActiveTab('documents'); }}>
             {'Documents (' + docCount + ')'}
           </button>
-          <button
-            role="tab"
+          <button role="tab"
             className={styles.tab + (activeTab === 'listItems' ? ' ' + styles.activeTab : '')}
-            onClick={function() { setActiveTab('listItems'); }}
-          >
+            onClick={function() { setActiveTab('listItems'); }}>
             {'List Items (' + listCount + ')'}
           </button>
         </div>
@@ -287,7 +288,8 @@ export const SpSmartSearch: React.FC<ISpSmartSearchProps> = (props) => {
         {!isLoading && hasSearched && results ? (
           React.createElement(ResultsList, {
             items: visibleItems,
-            config: columnConfig,
+            titleColumn: titleColumn,
+            displayColumns: displayColumns,
             emptyMessage: 'No results found for "' + searchText + '"'
           })
         ) : null}
