@@ -37,8 +37,8 @@ export default class SpSmartSearchWebPart extends BaseClientSideWebPart<ISpSmart
     ReactDom.unmountComponentAtNode(this.domElement);
   }
 
-  protected get dataVersion(): Version {
-    return Version.v1;
+protected get dataVersion(): Version {
+    return Version.parse('1.0.0');
   }
 
   protected getPropertyPaneConfiguration(): IPropertyPaneConfiguration {
