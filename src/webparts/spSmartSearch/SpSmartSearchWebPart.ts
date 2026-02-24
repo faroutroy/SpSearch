@@ -18,7 +18,6 @@ export interface ISpSmartSearchWebPartProps {
   searchScope: 'site' | 'url';
   scopeUrl: string;
   titleColumn: string;
-  displayColumns: string;
 }
 
 export default class SpSmartSearchWebPart extends BaseClientSideWebPart<ISpSmartSearchWebPartProps> {
@@ -35,8 +34,7 @@ export default class SpSmartSearchWebPart extends BaseClientSideWebPart<ISpSmart
         displayMode: this.properties.displayMode || 'listItems',
         searchScope: this.properties.searchScope || 'url',
         scopeUrl: this.properties.scopeUrl || '',
-        titleColumn: this.properties.titleColumn || '',
-        displayColumns: this.properties.displayColumns || ''
+        titleColumn: this.properties.titleColumn || ''
       }
     );
     ReactDom.render(element, this.domElement);
@@ -101,26 +99,15 @@ export default class SpSmartSearchWebPart extends BaseClientSideWebPart<ISpSmart
               ]
             },
             {
-              groupName: '🏷 Column Settings',
+              groupName: '🏷 Title Column',
               groupFields: [
                 PropertyPaneTextField('titleColumn', {
-                  label: 'Title Column',
-                  description: 'Internal column name to show as the result title. Example: Bid2WinID, Project, Title',
-                  placeholder: 'e.g. Bid2WinID'
+                  label: 'Title Column (Internal Name)',
+                  description: 'Enter the internal column name to use as the result title.',
+                  placeholder: 'e.g. bid2WinId'
                 }),
                 PropertyPaneLabel('titleColumnNote', {
-                  text: '💡 The value of this column will appear as the title for each result row.'
-                }),
-                PropertyPaneTextField('displayColumns', {
-                  label: 'Additional Columns to Display',
-                  description: 'Enter internal column names separated by commas to show as metadata under each result.',
-                  placeholder: 'e.g. Estimator,City,State,BidDate,Segment',
-                  multiline: true,
-                  resizable: false,
-                  rows: 4
-                }),
-                PropertyPaneLabel('displayColumnsNote', {
-                  text: '💡 Use exact internal column names from your SharePoint list. Separate multiple columns with commas.'
+                  text: '💡 The value of this column will appear as the clickable title for each result. Common values: bid2WinId, project, estimator, title'
                 })
               ]
             }
