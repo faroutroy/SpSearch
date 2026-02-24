@@ -212,6 +212,21 @@
   }
 }
 
+.metaItem {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  color: #605e5c;
+  background-color: #f3f2f1;
+  padding: 2px 8px;
+  border-radius: 12px;
+
+  strong {
+    color: #323130;
+    font-weight: 600;
+  }
+}
 .configRequired {
   display: flex;
   flex-direction: column;
