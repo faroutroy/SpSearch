@@ -18,17 +18,11 @@ function formatDate(val: string): string {
   }
 }
 
-function parseColumns(raw: string): string[] {
-  if (!raw || raw.trim() === '') return [];
-  return raw.split(',').map(function(c) { return c.trim(); }).filter(function(c) { return c !== ''; });
-}
-
 function getFieldValue(item: ISpSmartItem, fieldName: string): string {
   if (!fieldName || fieldName.trim() === '') return '';
   var key = fieldName.trim();
   var val = (item as any)[key];
   if (val !== undefined && val !== null && String(val).trim() !== '') return String(val);
-  // try camelCase first letter
   var camel = key.charAt(0).toLowerCase() + key.slice(1);
   var val2 = (item as any)[camel];
   if (val2 !== undefined && val2 !== null && String(val2).trim() !== '') return String(val2);
@@ -36,7 +30,7 @@ function getFieldValue(item: ISpSmartItem, fieldName: string): string {
 }
 
 function resolveTitleValue(item: ISpSmartItem, titleColumn: string): string {
-  // 1. Try the user-specified title column
+  // 1. Try user-specified column
   if (titleColumn && titleColumn.trim() !== '') {
     var fromCol = getFieldValue(item, titleColumn);
     if (fromCol && fromCol.trim() !== '') return fromCol;
@@ -52,25 +46,34 @@ function resolveTitleValue(item: ISpSmartItem, titleColumn: string): string {
 function ResultItemRow(props: {
   item: ISpSmartItem;
   titleColumn: string;
-  displayColumns: string[];
 }): any {
   var item = props.item;
   var titleValue = resolveTitleValue(item, props.titleColumn);
 
-  var metaSpans: any[] = [];
-  props.displayColumns.forEach(function(col) {
-    var val = getFieldValue(item, col);
-    if (!val || val.trim() === '') return;
-    if (col.toLowerCase().indexOf('date') !== -1) {
-      val = formatDate(val);
-    }
-    metaSpans.push(
-      React.createElement('span', { key: col, className: styles.metaItem },
-        React.createElement('strong', null, col + ': '),
-        val
+  // Fixed metadata: Modified by, Modified on, Created by, Created on
+  var modifiedBy = item.author || '';
+  var modifiedOn = item.modifiedDate ? formatDate(item.modifiedDate) : '';
+
+  // Build meta row items — only show if value exists
+  var metaItems: any[] = [];
+
+  if (modifiedBy) {
+    metaItems.push(
+      React.createElement('span', { key: 'modby', className: styles.metaItem },
+        React.createElement('span', { className: styles.metaLabel }, 'Modified by: '),
+        React.createElement('span', { className: styles.metaValue }, modifiedBy)
       )
     );
-  });
+  }
+
+  if (modifiedOn) {
+    metaItems.push(
+      React.createElement('span', { key: 'modon', className: styles.metaItem },
+        React.createElement('span', { className: styles.metaLabel }, 'Modified on: '),
+        React.createElement('span', { className: styles.metaValue }, modifiedOn)
+      )
+    );
+  }
 
   return React.createElement(
     'li',
@@ -79,21 +82,11 @@ function ResultItemRow(props: {
       item.type === 'listItem' ? '📋' : '📄'
     ),
     React.createElement('div', { className: styles.resultContent },
-      React.createElement('a', {
-        href: item.url,
-        target: '_blank',
-        rel: 'noopener noreferrer',
-        className: styles.resultTitle,
-        title: titleValue
-      }, titleValue),
-      metaSpans.length > 0
-        ? React.createElement('div', { className: styles.resultMeta }, metaSpans)
-        : null,
-      item.summary
-        ? React.createElement('div', {
-            className: styles.resultSummary,
-            dangerouslySetInnerHTML: { __html: item.summary }
-          })
+      // Title — value of the column entered in property pane
+      React.createElement('div', { className: styles.resultTitle }, titleValue),
+      // Fixed metadata row
+      metaItems.length > 0
+        ? React.createElement('div', { className: styles.resultMeta }, metaItems)
         : null
     )
   );
@@ -103,7 +96,6 @@ function ResultsList(props: {
   items: ISpSmartItem[];
   emptyMessage: string;
   titleColumn: string;
-  displayColumns: string[];
 }): any {
   if (props.items.length === 0) {
     return React.createElement('div', { className: styles.noResults },
@@ -116,8 +108,7 @@ function ResultsList(props: {
       return React.createElement(ResultItemRow, {
         key: item.id,
         item: item,
-        titleColumn: props.titleColumn,
-        displayColumns: props.displayColumns
+        titleColumn: props.titleColumn
       });
     })
   );
@@ -129,7 +120,6 @@ export const SpSmartSearch: React.FC<ISpSmartSearchProps> = (props) => {
   var searchScope = props.searchScope;
   var scopeUrl = props.scopeUrl;
   var titleColumn = props.titleColumn;
-  var displayColumns = parseColumns(props.displayColumns);
 
   const [searchText, setSearchText] = useState('');
   const [includeDocuments, setIncludeDocuments] = useState(displayMode !== 'listItems');
@@ -205,7 +195,6 @@ export const SpSmartSearch: React.FC<ISpSmartSearchProps> = (props) => {
 
   return (
     <div className={styles.spSmartSearch}>
-
       <div className={styles.searchBar}>
         <input
           type="text"
@@ -289,7 +278,6 @@ export const SpSmartSearch: React.FC<ISpSmartSearchProps> = (props) => {
           React.createElement(ResultsList, {
             items: visibleItems,
             titleColumn: titleColumn,
-            displayColumns: displayColumns,
             emptyMessage: 'No results found for "' + searchText + '"'
           })
         ) : null}
