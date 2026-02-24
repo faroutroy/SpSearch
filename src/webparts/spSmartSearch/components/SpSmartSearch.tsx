@@ -1,7 +1,7 @@
 import * as React from 'react';
 import { useState, useCallback } from 'react';
 import styles from './SpSmartSearch.module.scss';
-import { ISpSmartSearchProps, IColumnConfig } from './ISpSmartSearchProps';
+import { ISpSmartSearchProps } from './ISpSmartSearchProps';
 import { ISpSmartItem, ISearchResult, DisplayMode } from '../models/ISpSmartItem';
 import { SpSmartSearchService } from '../services/SpSmartSearchService';
 
@@ -130,8 +130,8 @@ export const SpSmartSearch: React.FC<ISpSmartSearchProps> = (props) => {
   const [searchText, setSearchText] = useState('');
   const [includeDocuments, setIncludeDocuments] = useState(displayMode !== 'listItems');
   const [includeListItems, setIncludeListItems] = useState(displayMode !== 'documents');
-  const [activeTab, setActiveTab] = useState('all' as ActiveTab);
-  const [results, setResults] = useState(null as ISearchResult | null);
+   [activeTab, setActiveTab] = useState('all' as ActiveTab);
+   [results, setResults] = useState(null as ISearchResult | null);
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
   const [hasSearched, setHasSearched] = useState(false);
