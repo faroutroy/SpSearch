@@ -9,12 +9,13 @@ import {
 import { BaseClientSideWebPart } from '@microsoft/sp-webpart-base';
 import { SpSmartSearch } from './components/SpSmartSearch';
 import { ISpSmartSearchProps } from './components/ISpSmartSearchProps';
+import { DisplayMode } from './models/ISpSmartItem';
 
 export interface ISpSmartSearchWebPartProps {
   searchScope: 'site' | 'url';
   scopeUrl: string;
   titleField: string;
-  displayColumn: string;   // ← NEW
+  displayColumn: string;
 }
 
 export default class SpSmartSearchWebPart extends BaseClientSideWebPart<ISpSmartSearchWebPartProps> {
@@ -23,6 +24,7 @@ export default class SpSmartSearchWebPart extends BaseClientSideWebPart<ISpSmart
       SpSmartSearch,
       {
         context: this.context,
+        displayMode: this.displayMode,           // kept for compatibility (edit/view mode)
         searchScope: this.properties.searchScope || 'site',
         scopeUrl: this.properties.scopeUrl || '',
         titleField: this.properties.titleField || 'Title',
@@ -37,7 +39,7 @@ export default class SpSmartSearchWebPart extends BaseClientSideWebPart<ISpSmart
     ReactDom.unmountComponentAtNode(this.domElement);
   }
 
-protected get dataVersion(): Version {
+  protected get dataVersion(): Version {
     return Version.parse('1.0.0');
   }
 
@@ -53,7 +55,8 @@ protected get dataVersion(): Version {
               groupName: "Search Settings",
               groupFields: [
                 PropertyPaneTextField('titleField', {
-                  label: 'Title Field'
+                  label: 'Title Field',
+                  description: 'Field to use as the title for search results'
                 }),
                 PropertyPaneDropdown('searchScope', {
                   label: 'Search Scope',
@@ -64,11 +67,12 @@ protected get dataVersion(): Version {
                 }),
                 PropertyPaneTextField('scopeUrl', {
                   label: 'Scope URL',
+                  description: 'Only used when Specific URL is selected',
                   disabled: this.properties.searchScope !== 'url'
                 }),
                 PropertyPaneTextField('displayColumn', {
                   label: 'Column Name to Display',
-                  description: 'Internal name of the column (e.g. Metro, Project_x0020_Name, Bid2WinID). Its value will appear for every result instead of the DisplayForm link.',
+                  description: 'Internal name of the column (e.g. Metro, Project_x0020_Name). This value will replace the old DisplayForm link in every result.',
                   placeholder: 'Metro'
                 })
               ]
