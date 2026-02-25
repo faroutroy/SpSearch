@@ -74,14 +74,13 @@ export class SpSmartSearchService {
     const siteId = this.context.pageContext.site.id.toString();
     const webId = this.context.pageContext.web.id.toString();
 
-    // Base properties always requested
     const baseProps: string[] = [
       'Title', 'Path', 'FileExtension', 'LastModifiedTime', 'Author',
       'Created', 'CreatedBy', 'HitHighlightedSummary', 'SiteTitle',
       'ListItemID', 'ListID'
     ];
 
-    // Add user-specified title column if provided and not already in list
+    // Add user-specified title column if not already included
     if (this.titleColumn && this.titleColumn.trim() !== '') {
       var tc = this.titleColumn.trim();
       if (baseProps.indexOf(tc) === -1) {
@@ -89,12 +88,10 @@ export class SpSmartSearchService {
       }
     }
 
-    // Content type filter
     var contentTypeFilter = type === 'document'
       ? 'ContentTypeId:0x0101*'
       : 'ContentTypeId:0x0* NOT ContentTypeId:0x0101*';
 
-    // Path scope
     var pathScope = scopedUrl
       ? '(path:"' + scopedUrl + '" OR ParentLink:"' + scopedUrl + '*")'
       : 'path:"' + siteUrl + '"';
@@ -159,18 +156,27 @@ export class SpSmartSearchService {
     return rows.map((row: any) => this.mapRowToItem(row, type, query));
   }
 
+  // Returns value as string — handles null ValueType correctly
   private getCellValue(row: any, key: string): string {
     const cells = row.Cells && row.Cells.results ? row.Cells.results : (row.Cells || []);
     const cell = cells.find((c: any) => c.Key === key);
-    return cell ? cell.Value || '' : '';
+    if (!cell) return '';
+    if (cell.ValueType === 'Null' || cell.Value === null || cell.Value === undefined) return '';
+    return String(cell.Value);
   }
 
+  // Stores ALL keys — value is empty string if null, so keys are always present
   private getAllCells(row: any): Record<string, string> {
     const cells = row.Cells && row.Cells.results ? row.Cells.results : (row.Cells || []);
     const result: Record<string, string> = {};
     cells.forEach(function(c: any) {
-      if (c.Key && c.Value) {
-        result[c.Key] = c.Value;
+      if (c.Key) {
+        // Store empty string for null values — key still present for matching
+        if (c.ValueType === 'Null' || c.Value === null || c.Value === undefined) {
+          result[c.Key] = '';
+        } else {
+          result[c.Key] = String(c.Value);
+        }
       }
     });
     return result;
@@ -184,7 +190,7 @@ export class SpSmartSearchService {
     var keys = Object.keys(allCells);
 
     // Step 1 — exact match
-    if (allCells[tc] && allCells[tc].trim() !== '') {
+    if (allCells[tc] !== undefined && allCells[tc].trim() !== '') {
       return allCells[tc];
     }
 
@@ -197,7 +203,7 @@ export class SpSmartSearchService {
       }
     }
 
-    // Step 3 — partial match (e.g. user types "Bid2Win", matches "Bid2WinIDOWSNMBR")
+    // Step 3 — partial match (e.g. "Bid2Win" matches "Bid2WinIDOWSNMBR")
     for (var j = 0; j < keys.length; j++) {
       if (keys[j].toLowerCase().indexOf(tcLower) !== -1) {
         if (allCells[keys[j]] && allCells[keys[j]].trim() !== '') {
@@ -209,7 +215,11 @@ export class SpSmartSearchService {
     return '';
   }
 
-  private buildItemUrl(row: any, path: string, type: 'document' | 'listItem', allCells: Record<string, string>): string {
+  private buildItemUrl(
+    path: string,
+    type: 'document' | 'listItem',
+    allCells: Record<string, string>
+  ): string {
     if (type !== 'listItem') return path;
 
     var listItemId = allCells['ListItemID'] || '';
@@ -227,16 +237,15 @@ export class SpSmartSearchService {
     const path = this.getCellValue(row, 'Path');
     const allCells = this.getAllCells(row);
 
-    // Resolve title from user-specified column using 3-step matching
+    // Try to get title from user-specified column
     var displayTitle = this.resolveTitleFromColumn(allCells);
 
-    // Fallback — use search keyword if column value not found
+    // Fallback to search keyword if column is empty or null
     if (!displayTitle || displayTitle.trim() === '') {
       displayTitle = searchQuery;
     }
 
-    // Build correct clickable URL
-    var itemUrl = this.buildItemUrl(row, path, type, allCells);
+    var itemUrl = this.buildItemUrl(path, type, allCells);
 
     return {
       id: path,
