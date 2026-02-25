@@ -50,13 +50,13 @@ export default class SpSmartSearchWebPart extends BaseClientSideWebPart<ISpSmart
 
   protected getPropertyPaneConfiguration(): IPropertyPaneConfiguration {
     const displayModeOptions: IPropertyPaneDropdownOption[] = [
-      { key: 'both', text: 'Both (Documents & List Items with tabs)' },
+      { key: 'both', text: 'Both (Documents & List Items)' },
       { key: 'documents', text: 'Documents only' },
       { key: 'listItems', text: 'List Items only' }
     ];
 
     const searchScopeOptions: IPropertyPaneDropdownOption[] = [
-      { key: 'site', text: 'Entire Site (all lists & libraries)' },
+      { key: 'site', text: 'Entire Site' },
       { key: 'url', text: 'Specific List or Library URL' }
     ];
 
@@ -65,10 +65,10 @@ export default class SpSmartSearchWebPart extends BaseClientSideWebPart<ISpSmart
     return {
       pages: [
         {
-          header: { description: 'Configure search settings and display options.' },
+          header: { description: 'Configure search settings.' },
           groups: [
             {
-              groupName: '📋 Display Options',
+              groupName: 'Display Options',
               groupFields: [
                 PropertyPaneDropdown('displayMode', {
                   label: 'Content types to display',
@@ -78,7 +78,7 @@ export default class SpSmartSearchWebPart extends BaseClientSideWebPart<ISpSmart
               ]
             },
             {
-              groupName: '🔍 Search Scope',
+              groupName: 'Search Scope',
               groupFields: [
                 PropertyPaneDropdown('searchScope', {
                   label: 'Search scope',
@@ -87,9 +87,6 @@ export default class SpSmartSearchWebPart extends BaseClientSideWebPart<ISpSmart
                 }),
                 PropertyPaneTextField('scopeUrl', {
                   label: isSiteScope ? 'Site URL' : 'List or Library URL',
-                  description: isSiteScope
-                    ? 'Enter the full URL of the SharePoint site to search'
-                    : 'Enter the full URL of a specific list or document library',
                   placeholder: isSiteScope
                     ? 'https://contoso.sharepoint.com/sites/MySite'
                     : 'https://contoso.sharepoint.com/sites/MySite/Lists/MyList',
@@ -99,15 +96,14 @@ export default class SpSmartSearchWebPart extends BaseClientSideWebPart<ISpSmart
               ]
             },
             {
-              groupName: '🏷 Title Column',
+              groupName: 'Title Column',
               groupFields: [
                 PropertyPaneTextField('titleColumn', {
                   label: 'Title Column (Internal Name)',
-                  description: 'Enter the internal column name to use as the result title.',
-                  placeholder: 'e.g. bid2WinId'
+                  placeholder: 'e.g. Bid2WinID'
                 }),
                 PropertyPaneLabel('titleColumnNote', {
-                  text: '💡 The value of this column will appear as the clickable title for each result. Common values: bid2WinId, project, estimator, title'
+                  text: 'Enter the exact internal name of the SharePoint column to use as the result title. The value of this column will be shown for each result.'
                 })
               ]
             }
