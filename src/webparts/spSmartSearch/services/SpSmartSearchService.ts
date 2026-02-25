@@ -4,11 +4,11 @@ import { ISpSmartItem, ISearchResult, DisplayMode } from '../models/ISpSmartItem
 
 export class SpSmartSearchService {
   private context: WebPartContext;
-  private titleField: string;
+  private titleColumn: string;
 
-  constructor(context: WebPartContext, titleField: string) {
+  constructor(context: WebPartContext, titleColumn: string) {
     this.context = context;
-    this.titleField = titleField || 'auto';
+    this.titleColumn = titleColumn || '';
   }
 
   public async search(
@@ -22,19 +22,15 @@ export class SpSmartSearchService {
     return this.searchBySite(query, displayMode, scopeUrl);
   }
 
-  private async searchBySite(
-    query: string,
-    displayMode: DisplayMode,
-    siteUrl: string
-  ): Promise<ISearchResult> {
+  private async searchBySite(query: string, displayMode: DisplayMode, siteUrl: string): Promise<ISearchResult> {
     const results: ISearchResult = { documents: [], listItems: [] };
     const normalizedSiteUrl = siteUrl.replace(/\/$/, '');
     try {
       if (displayMode === 'documents' || displayMode === 'both') {
-        results.documents = await this.searchDocuments(query, normalizedSiteUrl);
+        results.documents = await this.executeSearch(query, normalizedSiteUrl, 'document', null);
       }
       if (displayMode === 'listItems' || displayMode === 'both') {
-        results.listItems = await this.searchListItems(query, normalizedSiteUrl);
+        results.listItems = await this.executeSearch(query, normalizedSiteUrl, 'listItem', null);
       }
     } catch (error) {
       console.error('searchBySite error:', error);
@@ -43,20 +39,16 @@ export class SpSmartSearchService {
     return results;
   }
 
-  private async searchByUrl(
-    query: string,
-    displayMode: DisplayMode,
-    targetUrl: string
-  ): Promise<ISearchResult> {
+  private async searchByUrl(query: string, displayMode: DisplayMode, targetUrl: string): Promise<ISearchResult> {
     const results: ISearchResult = { documents: [], listItems: [] };
     try {
       const siteUrl = this.getSiteUrlFromListUrl(targetUrl);
       const normalizedTargetUrl = targetUrl.replace(/\/$/, '');
       if (displayMode === 'documents' || displayMode === 'both') {
-        results.documents = await this.searchDocumentsByLibraryUrl(query, siteUrl, normalizedTargetUrl);
+        results.documents = await this.executeSearch(query, siteUrl, 'document', normalizedTargetUrl);
       }
       if (displayMode === 'listItems' || displayMode === 'both') {
-        results.listItems = await this.searchListItemsByListUrl(query, siteUrl, normalizedTargetUrl);
+        results.listItems = await this.executeSearch(query, siteUrl, 'listItem', normalizedTargetUrl);
       }
     } catch (error) {
       console.error('searchByUrl error:', error);
@@ -65,112 +57,69 @@ export class SpSmartSearchService {
     return results;
   }
 
-  private buildSelectProperties(props: string[]): any {
-    return {
-      '__metadata': { 'type': 'Collection(Edm.String)' },
-      'results': props
-    };
-  }
-
-  private readonly docProps: string[] = [
-    'Title', 'Path', 'FileExtension', 'LastModifiedTime', 'Author',
-    'HitHighlightedSummary', 'SiteTitle', 'BusinessArea', 'BidDate',
-    'Estimator', 'Bid2WinID', 'Segment', 'SqYards', 'LaneMiles',
-    'NumberOfLots', 'City', 'County', 'State', 'ZipCode', 'Owner', 'Project'
-  ];
-
-  private readonly listProps: string[] = [
-    'Title', 'Path', 'LastModifiedTime', 'Author',
-    'HitHighlightedSummary', 'SiteTitle', 'ListItemID',
-    'BusinessArea', 'BidDate', 'Estimator', 'Bid2WinID', 'Segment', 'SqYards', 'LaneMiles',
-    'NumberOfLots', 'City', 'County', 'State', 'ZipCode', 'Owner', 'Project'
-  ];
-
-  private async searchDocuments(query: string, siteUrl: string): Promise<ISpSmartItem[]> {
-    const siteId = this.context.pageContext.site.id.toString();
-    const webId = this.context.pageContext.web.id.toString();
-    const body = {
-      request: {
-        '__metadata': { 'type': 'Microsoft.Office.Server.Search.REST.SearchRequest' },
-        'Querytext': '(' + query + '*)',
-        'QueryTemplate': '{searchTerms} (siteId:{' + siteId + '} OR siteId:' + siteId + ') (webId:{' + webId + '} OR webId:' + webId + ') path:"' + siteUrl + '" ContentTypeId:0x0101*',
-        'SelectProperties': this.buildSelectProperties(this.docProps),
-        'RowLimit': 50,
-        'BypassResultTypes': true,
-        'EnableQueryRules': false,
-        'TrimDuplicates': false
-      }
-    };
-    return this.executePostSearch(siteUrl, body, 'document');
-  }
-
-  private async searchListItems(query: string, siteUrl: string): Promise<ISpSmartItem[]> {
-    const siteId = this.context.pageContext.site.id.toString();
-    const webId = this.context.pageContext.web.id.toString();
-    const body = {
-      request: {
-        '__metadata': { 'type': 'Microsoft.Office.Server.Search.REST.SearchRequest' },
-        'Querytext': '(' + query + '*)',
-        'QueryTemplate': '{searchTerms} (siteId:{' + siteId + '} OR siteId:' + siteId + ') (webId:{' + webId + '} OR webId:' + webId + ') path:"' + siteUrl + '" ContentTypeId:0x0* NOT ContentTypeId:0x0101*',
-        'SelectProperties': this.buildSelectProperties(this.listProps),
-        'RowLimit': 50,
-        'BypassResultTypes': true,
-        'EnableQueryRules': false,
-        'TrimDuplicates': false
-      }
-    };
-    return this.executePostSearch(siteUrl, body, 'listItem');
-  }
-
-  private async searchDocumentsByLibraryUrl(
+  private async executeSearch(
     query: string,
     siteUrl: string,
-    libraryUrl: string
+    type: 'document' | 'listItem',
+    scopedUrl: string | null
   ): Promise<ISpSmartItem[]> {
     const siteId = this.context.pageContext.site.id.toString();
     const webId = this.context.pageContext.web.id.toString();
+
+    // Build select properties dynamically
+    // Always include base properties + the user-specified title column
+    const baseProps = [
+      'Title', 'Path', 'FileExtension', 'LastModifiedTime', 'Author',
+      'Created', 'CreatedBy', 'HitHighlightedSummary', 'SiteTitle', 'ListItemID'
+    ];
+
+    // Add title column if specified and not already in base
+    if (this.titleColumn && this.titleColumn.trim() !== '') {
+      var tc = this.titleColumn.trim();
+      if (baseProps.indexOf(tc) === -1) {
+        baseProps.push(tc);
+      }
+    }
+
+    // Build content type filter
+    var contentTypeFilter = '';
+    if (type === 'document') {
+      contentTypeFilter = 'ContentTypeId:0x0101*';
+    } else {
+      contentTypeFilter = 'ContentTypeId:0x0* NOT ContentTypeId:0x0101*';
+    }
+
+    // Build path scope
+    var pathScope = '';
+    if (scopedUrl) {
+      pathScope = '(path:"' + scopedUrl + '" OR ParentLink:"' + scopedUrl + '*")';
+    } else {
+      pathScope = 'path:"' + siteUrl + '"';
+    }
+
+    const queryTemplate =
+      '{searchTerms} ' +
+      '(siteId:{' + siteId + '} OR siteId:' + siteId + ') ' +
+      '(webId:{' + webId + '} OR webId:' + webId + ') ' +
+      pathScope + ' ' +
+      contentTypeFilter;
+
     const body = {
       request: {
         '__metadata': { 'type': 'Microsoft.Office.Server.Search.REST.SearchRequest' },
         'Querytext': '(' + query + '*)',
-        'QueryTemplate': '{searchTerms} (siteId:{' + siteId + '} OR siteId:' + siteId + ') (webId:{' + webId + '} OR webId:' + webId + ') (path:"' + libraryUrl + '" OR ParentLink:"' + libraryUrl + '*") ContentTypeId:0x0101*',
-        'SelectProperties': this.buildSelectProperties(this.docProps),
+        'QueryTemplate': queryTemplate,
+        'SelectProperties': {
+          '__metadata': { 'type': 'Collection(Edm.String)' },
+          'results': baseProps
+        },
         'RowLimit': 50,
         'BypassResultTypes': true,
         'EnableQueryRules': false,
         'TrimDuplicates': false
       }
     };
-    return this.executePostSearch(siteUrl, body, 'document');
-  }
 
-  private async searchListItemsByListUrl(
-    query: string,
-    siteUrl: string,
-    listUrl: string
-  ): Promise<ISpSmartItem[]> {
-    const siteId = this.context.pageContext.site.id.toString();
-    const webId = this.context.pageContext.web.id.toString();
-    const body = {
-      request: {
-        '__metadata': { 'type': 'Microsoft.Office.Server.Search.REST.SearchRequest' },
-        'Querytext': '(' + query + '*)',
-        'QueryTemplate': '{searchTerms} (siteId:{' + siteId + '} OR siteId:' + siteId + ') (webId:{' + webId + '} OR webId:' + webId + ') (path:"' + listUrl + '" OR ParentLink:"' + listUrl + '*") ContentTypeId:0x0* NOT ContentTypeId:0x0101*',
-        'SelectProperties': this.buildSelectProperties(this.listProps),
-        'RowLimit': 50,
-        'BypassResultTypes': true,
-        'EnableQueryRules': false,
-        'TrimDuplicates': false
-      }
-    };
-    return this.executePostSearch(siteUrl, body, 'listItem');
-  }
-
-  private async executePostSearch(
-    siteUrl: string,
-    body: any,
-    type: 'document' | 'listItem'
-  ): Promise<ISpSmartItem[]> {
     const searchUrl = siteUrl + '/_api/search/postquery';
     const options: ISPHttpClientOptions = {
       headers: {
@@ -180,15 +129,18 @@ export class SpSmartSearchService {
       },
       body: JSON.stringify(body)
     };
+
     const response: SPHttpClientResponse = await this.context.spHttpClient.post(
       searchUrl,
       SPHttpClient.configurations.v1,
       options
     );
+
     if (!response.ok) {
       const errorText = await response.text();
       throw new Error('Search failed (' + response.status + '): ' + errorText);
     }
+
     const data = await response.json();
     const rows =
       data &&
@@ -201,7 +153,8 @@ export class SpSmartSearchService {
       data.d.postquery.PrimaryQueryResult.RelevantResults.Table.Rows.results
         ? data.d.postquery.PrimaryQueryResult.RelevantResults.Table.Rows.results
         : [];
-    return rows.map((row: any) => this.mapRowToItem(row, type));
+
+    return rows.map((row: any) => this.mapRowToItem(row, type, query));
   }
 
   private getCellValue(row: any, key: string): string {
@@ -210,61 +163,67 @@ export class SpSmartSearchService {
     return cell ? cell.Value || '' : '';
   }
 
-  private mapRowToItem(row: any, type: 'document' | 'listItem'): ISpSmartItem {
+  private getAllCells(row: any): Record<string, string> {
+    const cells = row.Cells && row.Cells.results ? row.Cells.results : (row.Cells || []);
+    const result: Record<string, string> = {};
+    cells.forEach((c: any) => {
+      if (c.Key && c.Value) {
+        result[c.Key] = c.Value;
+      }
+    });
+    return result;
+  }
+
+  private mapRowToItem(row: any, type: 'document' | 'listItem', searchQuery: string): ISpSmartItem {
     const path = this.getCellValue(row, 'Path');
-    const rawTitle = this.getCellValue(row, 'Title');
-    const bid2WinId = this.getCellValue(row, 'Bid2WinID') || undefined;
-    const project = this.getCellValue(row, 'Project') || undefined;
-    const listItemId = this.getCellValue(row, 'ListItemID') || undefined;
+    const allCells = this.getAllCells(row);
 
-    let displayTitle: string;
+    // Build title from user-specified column
+    let displayTitle = '';
 
+    if (this.titleColumn && this.titleColumn.trim() !== '') {
+      // Try exact column name as provided
+      displayTitle = this.getCellValue(row, this.titleColumn.trim());
+    }
+
+    // If still empty — use search keyword as fallback instead of "Untitled"
+    if (!displayTitle || displayTitle.trim() === '') {
+      displayTitle = searchQuery;
+    }
+
+    // Build the correct item URL
+    // For list items — construct DispForm URL properly
+    var itemUrl = path;
     if (type === 'listItem') {
-      if (this.titleField && this.titleField !== 'auto') {
-        const fieldVal = this.getCellValue(row, this.titleField);
-        displayTitle = fieldVal && fieldVal.trim() !== '' ? fieldVal : 'Untitled';
-      } else {
-        const isDispForm = !rawTitle || rawTitle.toLowerCase().indexOf('dispform') !== -1;
-        if (bid2WinId) {
-          displayTitle = bid2WinId;
-        } else if (project) {
-          displayTitle = project;
-        } else if (!isDispForm && rawTitle && rawTitle.trim() !== '') {
-          displayTitle = rawTitle;
-        } else if (listItemId) {
-          displayTitle = 'Item #' + listItemId;
+      var listItemId = this.getCellValue(row, 'ListItemID');
+      if (listItemId && path.toLowerCase().indexOf('dispform') !== -1) {
+        // Path is already a DispForm URL — use as-is
+        itemUrl = path;
+      } else if (listItemId) {
+        // Construct proper DispForm URL from site + list path
+        var siteAbsUrl = this.context.pageContext.site.absoluteUrl;
+        var listPath = this.getCellValue(row, 'ParentLink') || '';
+        if (listPath) {
+          itemUrl = siteAbsUrl + '/_layouts/15/listform.aspx?PageType=4&ListId=' +
+            this.getCellValue(row, 'ListID') + '&ID=' + listItemId;
         } else {
-          displayTitle = 'Untitled';
+          itemUrl = path;
         }
       }
-    } else {
-      displayTitle = (rawTitle && rawTitle.trim() !== '') ? rawTitle : 'Untitled';
     }
 
     return {
       id: path,
       title: displayTitle,
       type: type,
-      url: path,
+      url: itemUrl,
       fileType: this.getCellValue(row, 'FileExtension') || undefined,
       listName: this.getCellValue(row, 'SiteTitle') || undefined,
       modifiedDate: this.getCellValue(row, 'LastModifiedTime') || undefined,
       author: this.getCellValue(row, 'Author') || undefined,
       summary: this.stripHighlightTags(this.getCellValue(row, 'HitHighlightedSummary')),
-      businessArea: this.getCellValue(row, 'BusinessArea') || undefined,
-      bidDate: this.getCellValue(row, 'BidDate') || undefined,
-      estimator: this.getCellValue(row, 'Estimator') || undefined,
-      bid2WinId: bid2WinId,
-      segment: this.getCellValue(row, 'Segment') || undefined,
-      sqYards: this.getCellValue(row, 'SqYards') || undefined,
-      laneMiles: this.getCellValue(row, 'LaneMiles') || undefined,
-      numberOfLots: this.getCellValue(row, 'NumberOfLots') || undefined,
-      city: this.getCellValue(row, 'City') || undefined,
-      county: this.getCellValue(row, 'County') || undefined,
-      state: this.getCellValue(row, 'State') || undefined,
-      zipCode: this.getCellValue(row, 'ZipCode') || undefined,
-      owner: this.getCellValue(row, 'Owner') || undefined,
-      project: project
+      // Store all raw cells so component can access any field by name
+      rawFields: allCells
     };
   }
 
