@@ -22,7 +22,11 @@ export class SpSmartSearchService {
     return this.searchBySite(query, displayMode, scopeUrl);
   }
 
-  private async searchBySite(query: string, displayMode: DisplayMode, siteUrl: string): Promise<ISearchResult> {
+  private async searchBySite(
+    query: string,
+    displayMode: DisplayMode,
+    siteUrl: string
+  ): Promise<ISearchResult> {
     const results: ISearchResult = { documents: [], listItems: [] };
     const normalizedSiteUrl = siteUrl.replace(/\/$/, '');
     try {
@@ -39,7 +43,11 @@ export class SpSmartSearchService {
     return results;
   }
 
-  private async searchByUrl(query: string, displayMode: DisplayMode, targetUrl: string): Promise<ISearchResult> {
+  private async searchByUrl(
+    query: string,
+    displayMode: DisplayMode,
+    targetUrl: string
+  ): Promise<ISearchResult> {
     const results: ISearchResult = { documents: [], listItems: [] };
     try {
       const siteUrl = this.getSiteUrlFromListUrl(targetUrl);
@@ -66,14 +74,14 @@ export class SpSmartSearchService {
     const siteId = this.context.pageContext.site.id.toString();
     const webId = this.context.pageContext.web.id.toString();
 
-    // Build select properties dynamically
-    // Always include base properties + the user-specified title column
-    const baseProps = [
+    // Base properties always requested
+    const baseProps: string[] = [
       'Title', 'Path', 'FileExtension', 'LastModifiedTime', 'Author',
-      'Created', 'CreatedBy', 'HitHighlightedSummary', 'SiteTitle', 'ListItemID'
+      'Created', 'CreatedBy', 'HitHighlightedSummary', 'SiteTitle',
+      'ListItemID', 'ListID'
     ];
 
-    // Add title column if specified and not already in base
+    // Add user-specified title column if provided and not already in list
     if (this.titleColumn && this.titleColumn.trim() !== '') {
       var tc = this.titleColumn.trim();
       if (baseProps.indexOf(tc) === -1) {
@@ -81,21 +89,15 @@ export class SpSmartSearchService {
       }
     }
 
-    // Build content type filter
-    var contentTypeFilter = '';
-    if (type === 'document') {
-      contentTypeFilter = 'ContentTypeId:0x0101*';
-    } else {
-      contentTypeFilter = 'ContentTypeId:0x0* NOT ContentTypeId:0x0101*';
-    }
+    // Content type filter
+    var contentTypeFilter = type === 'document'
+      ? 'ContentTypeId:0x0101*'
+      : 'ContentTypeId:0x0* NOT ContentTypeId:0x0101*';
 
-    // Build path scope
-    var pathScope = '';
-    if (scopedUrl) {
-      pathScope = '(path:"' + scopedUrl + '" OR ParentLink:"' + scopedUrl + '*")';
-    } else {
-      pathScope = 'path:"' + siteUrl + '"';
-    }
+    // Path scope
+    var pathScope = scopedUrl
+      ? '(path:"' + scopedUrl + '" OR ParentLink:"' + scopedUrl + '*")'
+      : 'path:"' + siteUrl + '"';
 
     const queryTemplate =
       '{searchTerms} ' +
@@ -166,7 +168,7 @@ export class SpSmartSearchService {
   private getAllCells(row: any): Record<string, string> {
     const cells = row.Cells && row.Cells.results ? row.Cells.results : (row.Cells || []);
     const result: Record<string, string> = {};
-    cells.forEach((c: any) => {
+    cells.forEach(function(c: any) {
       if (c.Key && c.Value) {
         result[c.Key] = c.Value;
       }
@@ -174,55 +176,78 @@ export class SpSmartSearchService {
     return result;
   }
 
+  private resolveTitleFromColumn(allCells: Record<string, string>): string {
+    if (!this.titleColumn || this.titleColumn.trim() === '') return '';
+
+    var tc = this.titleColumn.trim();
+    var tcLower = tc.toLowerCase();
+    var keys = Object.keys(allCells);
+
+    // Step 1 — exact match
+    if (allCells[tc] && allCells[tc].trim() !== '') {
+      return allCells[tc];
+    }
+
+    // Step 2 — case-insensitive exact match
+    for (var i = 0; i < keys.length; i++) {
+      if (keys[i].toLowerCase() === tcLower) {
+        if (allCells[keys[i]] && allCells[keys[i]].trim() !== '') {
+          return allCells[keys[i]];
+        }
+      }
+    }
+
+    // Step 3 — partial match (e.g. user types "Bid2Win", matches "Bid2WinIDOWSNMBR")
+    for (var j = 0; j < keys.length; j++) {
+      if (keys[j].toLowerCase().indexOf(tcLower) !== -1) {
+        if (allCells[keys[j]] && allCells[keys[j]].trim() !== '') {
+          return allCells[keys[j]];
+        }
+      }
+    }
+
+    return '';
+  }
+
+  private buildItemUrl(row: any, path: string, type: 'document' | 'listItem', allCells: Record<string, string>): string {
+    if (type !== 'listItem') return path;
+
+    var listItemId = allCells['ListItemID'] || '';
+    var listId = allCells['ListID'] || '';
+
+    if (listItemId && listId) {
+      var siteAbsUrl = this.context.pageContext.site.absoluteUrl;
+      return siteAbsUrl + '/_layouts/15/listform.aspx?PageType=4&ListId=' + listId + '&ID=' + listItemId;
+    }
+
+    return path;
+  }
+
   private mapRowToItem(row: any, type: 'document' | 'listItem', searchQuery: string): ISpSmartItem {
     const path = this.getCellValue(row, 'Path');
     const allCells = this.getAllCells(row);
 
-    // Build title from user-specified column
-    let displayTitle = '';
+    // Resolve title from user-specified column using 3-step matching
+    var displayTitle = this.resolveTitleFromColumn(allCells);
 
-    if (this.titleColumn && this.titleColumn.trim() !== '') {
-      // Try exact column name as provided
-      displayTitle = this.getCellValue(row, this.titleColumn.trim());
-    }
-
-    // If still empty — use search keyword as fallback instead of "Untitled"
+    // Fallback — use search keyword if column value not found
     if (!displayTitle || displayTitle.trim() === '') {
       displayTitle = searchQuery;
     }
 
-    // Build the correct item URL
-    // For list items — construct DispForm URL properly
-    var itemUrl = path;
-    if (type === 'listItem') {
-      var listItemId = this.getCellValue(row, 'ListItemID');
-      if (listItemId && path.toLowerCase().indexOf('dispform') !== -1) {
-        // Path is already a DispForm URL — use as-is
-        itemUrl = path;
-      } else if (listItemId) {
-        // Construct proper DispForm URL from site + list path
-        var siteAbsUrl = this.context.pageContext.site.absoluteUrl;
-        var listPath = this.getCellValue(row, 'ParentLink') || '';
-        if (listPath) {
-          itemUrl = siteAbsUrl + '/_layouts/15/listform.aspx?PageType=4&ListId=' +
-            this.getCellValue(row, 'ListID') + '&ID=' + listItemId;
-        } else {
-          itemUrl = path;
-        }
-      }
-    }
+    // Build correct clickable URL
+    var itemUrl = this.buildItemUrl(row, path, type, allCells);
 
     return {
       id: path,
       title: displayTitle,
       type: type,
       url: itemUrl,
-      fileType: this.getCellValue(row, 'FileExtension') || undefined,
-      listName: this.getCellValue(row, 'SiteTitle') || undefined,
-      modifiedDate: this.getCellValue(row, 'LastModifiedTime') || undefined,
-      author: this.getCellValue(row, 'Author') || undefined,
-      summary: this.stripHighlightTags(this.getCellValue(row, 'HitHighlightedSummary')),
-      // Store all raw cells so component can access any field by name
+      fileType: allCells['FileExtension'] || undefined,
+      listName: allCells['SiteTitle'] || undefined,
+      modifiedDate: allCells['LastModifiedTime'] || undefined,
+      author: allCells['Author'] || undefined,
+      summary: this.stripHighlightTags(allCells['HitHighlightedSummary'] || ''),
       rawFields: allCells
     };
   }
