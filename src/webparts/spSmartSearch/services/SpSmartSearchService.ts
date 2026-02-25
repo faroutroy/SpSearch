@@ -74,18 +74,31 @@ export class SpSmartSearchService {
     const siteId = this.context.pageContext.site.id.toString();
     const webId = this.context.pageContext.web.id.toString();
 
+    // Base properties — always fetched
     const baseProps: string[] = [
-      'Title', 'Path', 'FileExtension', 'LastModifiedTime', 'Author',
-      'Created', 'CreatedBy', 'HitHighlightedSummary', 'SiteTitle',
-      'ListItemID', 'ListID'
+      'Title', 'Path', 'OriginalPath', 'FileExtension',
+      'LastModifiedTime', 'Author', 'Created', 'CreatedBy',
+      'HitHighlightedSummary', 'SiteTitle', 'ListItemID', 'ListID'
     ];
 
-    // Add user-specified title column if not already included
+    // Add the user-typed column name AND common OWS variants of it
     if (this.titleColumn && this.titleColumn.trim() !== '') {
       var tc = this.titleColumn.trim();
-      if (baseProps.indexOf(tc) === -1) {
-        baseProps.push(tc);
-      }
+      var variants = [
+        tc,
+        tc + 'OWSCHCS',
+        tc + 'OWSTEXT',
+        tc + 'OWSNMBR',
+        tc + 'OWSDATE',
+        tc + 'OWSUSER',
+        tc + 'OWSText',
+        tc + 'OWSNumber'
+      ];
+      variants.forEach(function(v) {
+        if (baseProps.indexOf(v) === -1) {
+          baseProps.push(v);
+        }
+      });
     }
 
     var contentTypeFilter = type === 'document'
@@ -156,7 +169,6 @@ export class SpSmartSearchService {
     return rows.map((row: any) => this.mapRowToItem(row, type, query));
   }
 
-  // Returns value as string — handles null ValueType correctly
   private getCellValue(row: any, key: string): string {
     const cells = row.Cells && row.Cells.results ? row.Cells.results : (row.Cells || []);
     const cell = cells.find((c: any) => c.Key === key);
@@ -165,13 +177,11 @@ export class SpSmartSearchService {
     return String(cell.Value);
   }
 
-  // Stores ALL keys — value is empty string if null, so keys are always present
   private getAllCells(row: any): Record<string, string> {
     const cells = row.Cells && row.Cells.results ? row.Cells.results : (row.Cells || []);
     const result: Record<string, string> = {};
     cells.forEach(function(c: any) {
       if (c.Key) {
-        // Store empty string for null values — key still present for matching
         if (c.ValueType === 'Null' || c.Value === null || c.Value === undefined) {
           result[c.Key] = '';
         } else {
@@ -203,11 +213,20 @@ export class SpSmartSearchService {
       }
     }
 
-    // Step 3 — partial match (e.g. "Bid2Win" matches "Bid2WinIDOWSNMBR")
+    // Step 3 — key starts with typed column name (catches OWSCHCS variants)
     for (var j = 0; j < keys.length; j++) {
-      if (keys[j].toLowerCase().indexOf(tcLower) !== -1) {
+      if (keys[j].toLowerCase().indexOf(tcLower) === 0) {
         if (allCells[keys[j]] && allCells[keys[j]].trim() !== '') {
           return allCells[keys[j]];
+        }
+      }
+    }
+
+    // Step 4 — key contains typed column name anywhere
+    for (var k = 0; k < keys.length; k++) {
+      if (keys[k].toLowerCase().indexOf(tcLower) !== -1) {
+        if (allCells[keys[k]] && allCells[keys[k]].trim() !== '') {
+          return allCells[keys[k]];
         }
       }
     }
@@ -222,9 +241,22 @@ export class SpSmartSearchService {
   ): string {
     if (type !== 'listItem') return path;
 
+    // Path from SharePoint Search for list items is already the DispForm URL
+    // e.g. https://.../Lists/2013 Data/DispForm.aspx?ID=2175
+    // Use OriginalPath if available as it has the proper URL with ID
+    var originalPath = allCells['OriginalPath'] || '';
+    if (originalPath && originalPath.toLowerCase().indexOf('dispform') !== -1) {
+      return originalPath;
+    }
+
+    // Path itself is DispForm URL
+    if (path && path.toLowerCase().indexOf('dispform') !== -1) {
+      return path;
+    }
+
+    // Last resort — build from ListID + ListItemID
     var listItemId = allCells['ListItemID'] || '';
     var listId = allCells['ListID'] || '';
-
     if (listItemId && listId) {
       var siteAbsUrl = this.context.pageContext.site.absoluteUrl;
       return siteAbsUrl + '/_layouts/15/listform.aspx?PageType=4&ListId=' + listId + '&ID=' + listItemId;
@@ -237,10 +269,10 @@ export class SpSmartSearchService {
     const path = this.getCellValue(row, 'Path');
     const allCells = this.getAllCells(row);
 
-    // Try to get title from user-specified column
+    // Resolve title from user-specified column
     var displayTitle = this.resolveTitleFromColumn(allCells);
 
-    // Fallback to search keyword if column is empty or null
+    // Fallback to search keyword if column value not found or empty
     if (!displayTitle || displayTitle.trim() === '') {
       displayTitle = searchQuery;
     }
